@@ -1,5 +1,57 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.0.2] - 2025-12-24
+
+### Adicionado
+
+#### Melhorias para Pub.dev Score 100%
+- ✅ Adicionado `repository`, `issue_tracker` e `documentation` no `pubspec.yaml`
+- ✅ Atualizado `environment` para suportar Dart 3.0+ e Flutter 3.0+
+- ✅ Melhorada documentação DartDoc em todos os arquivos públicos
+- ✅ Adicionada documentação completa para classes, métodos e propriedades
+- ✅ Melhorado `analysis_options.yaml` com regras adicionais de lint
+- ✅ Expandida cobertura de testes com novos casos de teste
+- ✅ Melhorada documentação do arquivo principal da biblioteca
+
+#### Documentação
+- ✅ Documentação completa para `NfeDownloadResult` com exemplos
+- ✅ Documentação completa para `NfeCidadesDownloader` com exemplos de uso
+- ✅ Documentação completa para todas as exceções
+- ✅ Documentação completa para `NfeApiClient` e `AntiCaptchaClient`
+- ✅ Documentação completa para constantes e modelos internos
+- ✅ Adicionada documentação da biblioteca principal com características e pré-requisitos
+
+#### Testes
+- ✅ Adicionados testes para `NfeDownloadResult` com PDF bytes
+- ✅ Adicionados testes para exceções com status codes
+- ✅ Adicionados testes para preservação de erros originais e stack traces
+- ✅ Adicionados testes para `toString()` de exceções e resultados
+
+#### Configuração
+- ✅ Melhorado `analysis_options.yaml` com regras de lint adicionais
+- ✅ Configurado para ignorar `avoid_print` em arquivos de exemplo
+- ✅ Adicionadas regras recomendadas do Flutter Lints
+
+### Alterado
+
+#### Pubspec.yaml
+- ✅ Atualizado `environment.sdk` para `>=3.0.0 <4.0.0`
+- ✅ Atualizado `environment.flutter` para `>=3.0.0`
+- ✅ Adicionado `repository` com URL do GitHub
+- ✅ Adicionado `issue_tracker` com URL do GitHub issues
+- ✅ Adicionado `documentation` com URL do README
+
+#### Documentação
+- ✅ Melhorada documentação de todos os métodos públicos
+- ✅ Adicionados exemplos de código na documentação
+- ✅ Melhorada descrição de parâmetros e valores de retorno
+- ✅ Adicionada documentação de exceções que podem ser lançadas
+
 ## [0.0.1] - 2025-12-23
 
 ### Adicionado

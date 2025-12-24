@@ -35,65 +35,65 @@ void main() async {
   // Obtenha em: https://anti-captcha.com
   const apiKey = 'SUA_CHAVE_API_AQUI';
 
-  // Crie uma instância do downloader
-  final downloader = NfeCidadesDownloader(antiCaptchaApiKey: apiKey);
+  // Crie uma instância do baixador
+  final baixador = BaixadorNfeCidades(chaveApiAntiCaptcha: apiKey);
 
   try {
     print('Iniciando download da NFe...');
 
     // Exemplo 1: Obter apenas a URL de download
-    final result = await downloader.downloadNfe(senha: 'ABCD1234567890');
-    print('✓ URL de download obtida: ${result.downloadUrl}');
-    print('  Document ID: ${result.documentId}');
+    final resultado = await baixador.baixarNfe(senha: 'ABCD1234567890');
+    print('✓ URL de download obtida: ${resultado.urlDownload}');
+    print('  ID do Documento: ${resultado.idDocumento}');
 
     // Exemplo 2: Baixar a URL e os bytes do PDF
     print('\nBaixando PDF completo...');
-    final resultWithPdf = await downloader.downloadNfe(
+    final resultadoComPdf = await baixador.baixarNfe(
       senha: 'ABCD1234567890',
-      downloadBytes: true,
-      timeout: Duration(minutes: 2),
+      baixarBytes: true,
+      tempoLimite: const Duration(minutes: 2),
     );
 
-    if (resultWithPdf.pdfBytes != null) {
+    if (resultadoComPdf.bytesPdf != null) {
       // Verifica se estamos na web tentando usar File
       // Se File não estiver disponível ou lançar erro, estamos na web
       final isWeb = !_canUseFile();
       if (isWeb) {
         // Na web, você pode usar a URL diretamente ou fazer download via JavaScript
         print('✓ PDF baixado com sucesso!');
-        print('  Tamanho: ${resultWithPdf.pdfBytes!.length} bytes');
-        print('  URL de download: ${resultWithPdf.downloadUrl}');
+        print('  Tamanho: ${resultadoComPdf.bytesPdf!.length} bytes');
+        print('  URL de download: ${resultadoComPdf.urlDownload}');
         print(
           '  Dica: Na web, use a URL para fazer download ou processe os bytes no navegador',
         );
       } else {
         // Em plataformas nativas (Android, iOS, Desktop), salvar em arquivo
-        final file = File('${resultWithPdf.documentId}.pdf');
-        await file.writeAsBytes(resultWithPdf.pdfBytes!);
+        final file = File('${resultadoComPdf.idDocumento}.pdf');
+        await file.writeAsBytes(resultadoComPdf.bytesPdf!);
         print('✓ PDF salvo com sucesso: ${file.path}');
-        print('  Tamanho: ${resultWithPdf.pdfBytes!.length} bytes');
+        print('  Tamanho: ${resultadoComPdf.bytesPdf!.length} bytes');
       }
     }
-  } on InvalidSenhaException catch (e) {
+  } on ExcecaoSenhaInvalida catch (e) {
     print('✗ Senha inválida: $e');
-  } on DocumentNotFoundException catch (e) {
+  } on ExcecaoDocumentoNaoEncontrado catch (e) {
     print('✗ Documento não encontrado: $e');
-  } on CaptchaTimeoutException catch (e) {
+  } on ExcecaoTempoEsgotadoCaptcha catch (e) {
     print('✗ Timeout ao resolver captcha: $e');
     print('  Dica: O Anti-Captcha pode estar sobrecarregado. Tente novamente.');
-  } on AntiCaptchaException catch (e) {
+  } on ExcecaoAntiCaptcha catch (e) {
     print('✗ Erro no Anti-Captcha: $e');
     print('  Dica: Verifique se sua chave da API está correta e tem créditos.');
-  } on NetworkException catch (e) {
+  } on ExcecaoRede catch (e) {
     print('✗ Erro de rede: $e');
     print('  Dica: Verifique sua conexão com a internet.');
-  } on TimeoutException catch (e) {
+  } on ExcecaoTempoEsgotado catch (e) {
     print('✗ Timeout: $e');
-  } on NfeException catch (e) {
+  } on ExcecaoNfe catch (e) {
     print('✗ Erro geral: $e');
   } finally {
     // Sempre limpar os recursos
-    downloader.dispose();
+    baixador.liberar();
     print('\nRecursos liberados.');
   }
 }

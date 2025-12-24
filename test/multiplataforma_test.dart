@@ -10,47 +10,47 @@ import 'dart:typed_data';
 /// com foco especial na compatibilidade com web.
 void main() {
   group('Validação Multiplataforma', () {
-    test('deve criar instância do downloader em qualquer plataforma', () {
-      final downloader = NfeCidadesDownloader(
-        antiCaptchaApiKey: 'test_key_12345',
+    test('deve criar instância do baixador em qualquer plataforma', () {
+      final baixador = BaixadorNfeCidades(
+        chaveApiAntiCaptcha: 'test_key_12345',
       );
 
-      expect(downloader.antiCaptchaApiKey, 'test_key_12345');
-      expect(() => downloader.dispose(), returnsNormally);
+      expect(baixador.chaveApiAntiCaptcha, 'test_key_12345');
+      expect(() => baixador.liberar(), returnsNormally);
     });
 
     test('deve funcionar com Dio customizado', () {
       final dio = Dio();
-      final downloader = NfeCidadesDownloader(
-        antiCaptchaApiKey: 'test_key',
+      final baixador = BaixadorNfeCidades(
+        chaveApiAntiCaptcha: 'test_key',
         dio: dio,
       );
 
-      expect(downloader, isNotNull);
-      downloader.dispose();
+      expect(baixador, isNotNull);
+      baixador.liberar();
     });
 
-    test('deve criar NfeDownloadResult válido', () {
-      final result = NfeDownloadResult(
-        downloadUrl: 'https://example.com/download?id=123',
-        documentId: '123',
+    test('deve criar ResultadoDownloadNfe válido', () {
+      const resultado = ResultadoDownloadNfe(
+        urlDownload: 'https://example.com/download?id=123',
+        idDocumento: '123',
       );
 
-      expect(result.downloadUrl, contains('123'));
-      expect(result.documentId, '123');
-      expect(result.pdfBytes, isNull);
+      expect(resultado.urlDownload, contains('123'));
+      expect(resultado.idDocumento, '123');
+      expect(resultado.bytesPdf, isNull);
     });
 
-    test('deve criar NfeDownloadResult com PDF bytes', () {
+    test('deve criar ResultadoDownloadNfe com PDF bytes', () {
       final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
-      final result = NfeDownloadResult(
-        downloadUrl: 'https://example.com/download?id=123',
-        documentId: '123',
-        pdfBytes: bytes,
+      final resultado = ResultadoDownloadNfe(
+        urlDownload: 'https://example.com/download?id=123',
+        idDocumento: '123',
+        bytesPdf: bytes,
       );
 
-      expect(result.pdfBytes, isNotNull);
-      expect(result.pdfBytes!.length, 5);
+      expect(resultado.bytesPdf, isNotNull);
+      expect(resultado.bytesPdf!.length, 5);
     });
 
     test('deve detectar plataforma corretamente', () {
@@ -63,60 +63,60 @@ void main() {
       test('deve funcionar sem CookieJar na web', () {
         // Na web, o Dio gerencia cookies automaticamente
         // Este teste verifica que não há erro ao criar o cliente sem CookieJar
-        final downloader = NfeCidadesDownloader(antiCaptchaApiKey: 'test_key');
+        final baixador = BaixadorNfeCidades(chaveApiAntiCaptcha: 'test_key');
 
-        expect(downloader, isNotNull);
-        expect(() => downloader.dispose(), returnsNormally);
+        expect(baixador, isNotNull);
+        expect(() => baixador.liberar(), returnsNormally);
       });
     });
 
     group('Exceções Multiplataforma', () {
-      test('deve lançar InvalidSenhaException', () {
+      test('deve lançar ExcecaoSenhaInvalida', () {
         expect(
-          () => throw InvalidSenhaException('Senha inválida'),
-          throwsA(isA<InvalidSenhaException>()),
+          () => throw const ExcecaoSenhaInvalida('Senha inválida'),
+          throwsA(isA<ExcecaoSenhaInvalida>()),
         );
       });
 
-      test('deve lançar DocumentNotFoundException', () {
+      test('deve lançar ExcecaoDocumentoNaoEncontrado', () {
         expect(
-          () => throw DocumentNotFoundException('Documento não encontrado'),
-          throwsA(isA<DocumentNotFoundException>()),
+          () => throw const ExcecaoDocumentoNaoEncontrado('Documento não encontrado'),
+          throwsA(isA<ExcecaoDocumentoNaoEncontrado>()),
         );
       });
 
-      test('deve lançar CaptchaTimeoutException', () {
+      test('deve lançar ExcecaoTempoEsgotadoCaptcha', () {
         expect(
-          () => throw CaptchaTimeoutException('Timeout'),
-          throwsA(isA<CaptchaTimeoutException>()),
+          () => throw const ExcecaoTempoEsgotadoCaptcha('Timeout'),
+          throwsA(isA<ExcecaoTempoEsgotadoCaptcha>()),
         );
       });
 
-      test('deve lançar AntiCaptchaException', () {
+      test('deve lançar ExcecaoAntiCaptcha', () {
         expect(
-          () => throw AntiCaptchaException('Erro no Anti-Captcha'),
-          throwsA(isA<AntiCaptchaException>()),
+          () => throw const ExcecaoAntiCaptcha('Erro no Anti-Captcha'),
+          throwsA(isA<ExcecaoAntiCaptcha>()),
         );
       });
 
-      test('deve lançar NetworkException', () {
+      test('deve lançar ExcecaoRede', () {
         expect(
-          () => throw NetworkException('Erro de rede'),
-          throwsA(isA<NetworkException>()),
+          () => throw const ExcecaoRede('Erro de rede'),
+          throwsA(isA<ExcecaoRede>()),
         );
       });
 
-      test('deve lançar TimeoutException', () {
+      test('deve lançar ExcecaoTempoEsgotado', () {
         expect(
-          () => throw TimeoutException('Timeout geral'),
-          throwsA(isA<TimeoutException>()),
+          () => throw const ExcecaoTempoEsgotado('Timeout geral'),
+          throwsA(isA<ExcecaoTempoEsgotado>()),
         );
       });
 
-      test('deve lançar NfeApiException', () {
+      test('deve lançar ExcecaoApiNfe', () {
         expect(
-          () => throw NfeApiException('Erro na API'),
-          throwsA(isA<NfeApiException>()),
+          () => throw const ExcecaoApiNfe('Erro na API'),
+          throwsA(isA<ExcecaoApiNfe>()),
         );
       });
     });

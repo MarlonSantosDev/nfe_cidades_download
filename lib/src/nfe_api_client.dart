@@ -7,11 +7,22 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'constants.dart';
 import 'exceptions/nfe_exceptions.dart';
 
-/// Client for interacting with NFe-Cidades API
-class NfeApiClient {
+/// Cliente para interagir com a API NFe-Cidades
+///
+/// Esta classe trata todas as requisições HTTP para o site NFe-Cidades,
+/// incluindo busca de documentos, extração de ID do documento e download de PDF.
+///
+/// Ela gerencia cookies automaticamente usando [CookieJar] em plataformas não-web
+/// e depende do gerenciamento de cookies do navegador em plataformas web.
+class ClienteApiNfe {
   final Dio _dio;
 
-  NfeApiClient({Dio? dio, CookieJar? cookieJar}) : _dio = dio ?? Dio() {
+  /// Cria uma nova instância de [ClienteApiNfe]
+  ///
+  /// [dio] é opcional - forneça uma instância Dio personalizada se necessário.
+  /// [cookieJar] é opcional e apenas usado em plataformas não-web.
+  /// Em plataformas web, os cookies são gerenciados automaticamente pelo navegador.
+  ClienteApiNfe({Dio? dio, CookieJar? cookieJar}) : _dio = dio ?? Dio() {
     // Na web, o Dio gerencia cookies automaticamente através do navegador
     // Em outras plataformas, usamos CookieJar para gerenciar cookies
     if (!kIsWeb) {
@@ -19,223 +30,265 @@ class NfeApiClient {
       _dio.interceptors.add(CookieManager(jar));
     }
     // Na web, os cookies são gerenciados automaticamente pelo navegador
-    _dio.options.headers['User-Agent'] = NfeConstants.userAgent;
+    _dio.options.headers['User-Agent'] = ConstantesNfe.agenteUsuario;
   }
 
-  /// Searches for a document using senha and captcha token
-  /// Returns the encrypted data parameter needed for the next step
+  /// Busca um documento usando senha e token do captcha
+  ///
+  /// Este método envia uma requisição POST para a API NFe-Cidades para buscar
+  /// um documento usando a senha e o token do captcha fornecidos. Retorna uma
+  /// string de dados criptografados necessária para a próxima etapa do processo de download.
+  ///
+  /// [senha] é a senha formatada da NFe (ex: "ABCD1234567890")
+  /// [tokenCaptcha] é o token reCAPTCHA v2 obtido do Anti-Captcha
+  ///
+  /// Retorna a string de dados criptografados necessária para [obterIdDocumento]
+  ///
+  /// Lança [ExcecaoSenhaInvalida] se a senha ou o token do captcha for inválido
+  /// Lança [ExcecaoApiNfe] para outros erros da API
+  /// Lança [ExcecaoRede] para erros relacionados à rede
+  /// Lança [ExcecaoTempoEsgotado] se a requisição expirar
   Future<String> buscarDocumento({
     required String senha,
-    required String captchaToken,
+    required String tokenCaptcha,
   }) async {
     try {
-      final response = await _dio.post(
-        NfeConstants.nfeBuscarDocumentoUrl,
-        data: jsonEncode({'captcha': captchaToken, 'senha': senha}),
+      final resposta = await _dio.post(
+        ConstantesNfe.urlBuscarDocumentoNfe,
+        data: jsonEncode({'captcha': tokenCaptcha, 'senha': senha}),
         options: Options(
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json, text/plain, */*',
-            'Origin': NfeConstants.nfeBaseUrl,
-            'Referer': NfeConstants.nfeLandingPage,
+            'Origin': ConstantesNfe.urlBaseNfe,
+            'Referer': ConstantesNfe.urlPaginaInicialNfe,
           },
           responseType: ResponseType.json,
           validateStatus: (status) => status != null && status < 500,
         ),
       );
 
-      if (response.statusCode == 401 || response.statusCode == 403) {
-        throw InvalidSenhaException(
-          'Invalid senha or captcha token',
-          statusCode: response.statusCode,
+      if (resposta.statusCode == 401 || resposta.statusCode == 403) {
+        throw ExcecaoSenhaInvalida(
+          'Senha ou token do captcha inválido',
+          codigoStatus: resposta.statusCode,
         );
       }
 
-      if (response.statusCode != 200) {
-        throw NfeApiException(
-          'Failed to search for document: ${response.statusMessage}',
-          statusCode: response.statusCode,
+      if (resposta.statusCode != 200) {
+        throw ExcecaoApiNfe(
+          'Falha ao buscar documento: ${resposta.statusMessage}',
+          codigoStatus: resposta.statusCode,
         );
       }
 
-      // The response should contain encrypted data
-      // Handle different response formats: string JSON, Map, or direct string
+      // A resposta deve conter dados criptografados
+      // Tratar diferentes formatos de resposta: JSON string, Map ou string direta
 
-      // Check for null or empty response
-      if (response.data == null) {
-        throw NfeApiException(
-          'Invalid response from buscarDocumento: response data is null',
+      // Verificar resposta nula ou vazia
+      if (resposta.data == null) {
+        throw const ExcecaoApiNfe(
+          'Resposta inválida de buscarDocumento: dados da resposta são nulos',
         );
       }
 
-      Map<String, dynamic>? data;
+      Map<String, dynamic>? dados;
 
-      if (response.data is String) {
-        final responseStr = response.data as String;
-        if (responseStr.isEmpty) {
-          throw NfeApiException(
-            'Invalid response from buscarDocumento: response data is empty',
+      if (resposta.data is String) {
+        final stringResposta = resposta.data as String;
+        if (stringResposta.isEmpty) {
+          throw const ExcecaoApiNfe(
+            'Resposta inválida de buscarDocumento: dados da resposta estão vazios',
           );
         }
-        // Try to parse JSON string
+        // Tentar analisar string JSON
         try {
-          final decoded = jsonDecode(responseStr);
-          if (decoded is Map<String, dynamic>) {
-            data = decoded;
-          } else if (decoded is String) {
-            // Response is a direct string (the encrypted data)
-            return decoded;
+          final decodificado = jsonDecode(stringResposta);
+          if (decodificado is Map<String, dynamic>) {
+            dados = decodificado;
+          } else if (decodificado is String) {
+            // Resposta é uma string direta (os dados criptografados)
+            return decodificado;
           }
-        } catch (e) {
-          // If it's not valid JSON, treat as direct string response
-          return responseStr;
+        } catch (erro) {
+          // Se não for JSON válido, tratar como resposta de string direta
+          return stringResposta;
         }
-      } else if (response.data is Map<String, dynamic>) {
-        data = response.data as Map<String, dynamic>;
+      } else if (resposta.data is Map<String, dynamic>) {
+        dados = resposta.data as Map<String, dynamic>;
       }
 
-      // Check if we have a Map with 'validador' or 'data' key
-      if (data != null) {
-        // Try 'validador' first (current API format)
-        if (data.containsKey('validador')) {
-          final validador = data['validador'];
+      // Verificar se temos um Map com chave 'validador' ou 'data'
+      if (dados != null) {
+        // Tentar 'validador' primeiro (formato atual da API)
+        if (dados.containsKey('validador')) {
+          final validador = dados['validador'];
           if (validador is String) {
             return validador;
           }
         }
-        // Fallback to 'data' for backward compatibility
-        if (data.containsKey('data')) {
-          final encryptedData = data['data'];
-          if (encryptedData is String) {
-            return encryptedData;
+        // Fallback para 'data' para compatibilidade com versões anteriores
+        if (dados.containsKey('data')) {
+          final dadosCriptografados = dados['data'];
+          if (dadosCriptografados is String) {
+            return dadosCriptografados;
           }
         }
       }
 
-      // If we got here, the response structure is unexpected
-      final responseStr = response.data.toString();
-      final preview = responseStr.length > 200
-          ? '${responseStr.substring(0, 200)}...'
-          : responseStr;
-      throw NfeApiException(
-        'Invalid response from buscarDocumento. '
-        'Expected JSON with "validador" or "data" field, or direct string. '
-        'Received type: ${response.data.runtimeType}, preview: $preview',
+      // Se chegamos aqui, a estrutura da resposta é inesperada
+      final stringResposta = resposta.data.toString();
+      final preview = stringResposta.length > 200 ? '${stringResposta.substring(0, 200)}...' : stringResposta;
+      throw ExcecaoApiNfe(
+        'Resposta inválida de buscarDocumento. '
+        'Esperado JSON com campo "validador" ou "data", ou string direta. '
+        'Tipo recebido: ${resposta.data.runtimeType}, preview: $preview',
       );
-    } on DioException catch (e, stackTrace) {
-      if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout) {
-        throw TimeoutException('Request timed out', e, stackTrace);
+    } on DioException catch (erro, rastreamentoPilha) {
+      if (erro.type == DioExceptionType.connectionTimeout || erro.type == DioExceptionType.receiveTimeout) {
+        throw ExcecaoTempoEsgotado('Requisição expirou', erro, rastreamentoPilha);
       }
-      throw NetworkException('Network error in buscarDocumento', e, stackTrace);
+      throw ExcecaoRede('Erro de rede em buscarDocumento', erro, rastreamentoPilha);
     }
   }
 
-  /// Retrieves document details and extracts the document ID
-  Future<String> getDocumentId({
+  /// Recupera detalhes do documento e extrai o ID do documento
+  ///
+  /// Este método recupera a página HTML contendo os detalhes do documento e
+  /// extrai o ID do documento dela. O ID do documento é necessário para construir
+  /// a URL de download.
+  ///
+  /// [senha] é a senha formatada da NFe
+  /// [dadosCriptografados] é a string de dados criptografados retornada de [buscarDocumento]
+  ///
+  /// Retorna o ID do documento como uma string
+  ///
+  /// Lança [ExcecaoDocumentoNaoEncontrado] se o documento não for encontrado
+  /// Lança [ExcecaoApiNfe] se o ID do documento não puder ser extraído
+  /// Lança [ExcecaoRede] para erros relacionados à rede
+  /// Lança [ExcecaoTempoEsgotado] se a requisição expirar
+  Future<String> obterIdDocumento({
     required String senha,
-    required String encryptedData,
+    required String dadosCriptografados,
   }) async {
     try {
-      final response = await _dio.get(
-        NfeConstants.nfeDocumentosUrl,
-        queryParameters: {'senha': senha, 'data': encryptedData},
+      final resposta = await _dio.get(
+        ConstantesNfe.urlDocumentosNfe,
+        queryParameters: {'senha': senha, 'data': dadosCriptografados},
         options: Options(
           headers: {
-            'Accept':
-                'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Referer':
-                '${NfeConstants.nfeBaseUrl}/public/documentos?senha=$senha&data=$encryptedData',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Referer': '${ConstantesNfe.urlBaseNfe}/public/documentos?senha=$senha&data=$dadosCriptografados',
           },
           validateStatus: (status) => status != null && status < 500,
         ),
       );
 
-      if (response.statusCode == 404) {
-        throw DocumentNotFoundException(
-          'Document not found',
-          statusCode: response.statusCode,
+      if (resposta.statusCode == 404) {
+        throw ExcecaoDocumentoNaoEncontrado(
+          'Documento não encontrado',
+          codigoStatus: resposta.statusCode,
         );
       }
 
-      if (response.statusCode != 200) {
-        throw NfeApiException(
-          'Failed to get document details: ${response.statusMessage}',
-          statusCode: response.statusCode,
+      if (resposta.statusCode != 200) {
+        throw ExcecaoApiNfe(
+          'Falha ao obter detalhes do documento: ${resposta.statusMessage}',
+          codigoStatus: resposta.statusCode,
         );
       }
 
-      // Parse HTML response to extract document ID
-      // The ID is typically in a link or JavaScript variable
-      final html = response.data as String;
-      final documentId = _extractDocumentIdFromHtml(html);
+      // Analisar resposta HTML para extrair ID do documento
+      // O ID geralmente está em um link ou variável JavaScript
+      final html = resposta.data as String;
+      final idDocumento = _extrairIdDocumentoDoHtml(html);
 
-      if (documentId == null) {
-        throw NfeApiException('Could not extract document ID from response');
+      if (idDocumento == null) {
+        throw const ExcecaoApiNfe('Não foi possível extrair o ID do documento da resposta');
       }
 
-      return documentId;
-    } on DioException catch (e, stackTrace) {
-      if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout) {
-        throw TimeoutException('Request timed out', e, stackTrace);
+      return idDocumento;
+    } on DioException catch (erro, rastreamentoPilha) {
+      if (erro.type == DioExceptionType.connectionTimeout || erro.type == DioExceptionType.receiveTimeout) {
+        throw ExcecaoTempoEsgotado('Requisição expirou', erro, rastreamentoPilha);
       }
-      throw NetworkException('Network error in getDocumentId', e, stackTrace);
+      throw ExcecaoRede('Erro de rede em obterIdDocumento', erro, rastreamentoPilha);
     }
   }
 
-  /// Downloads the PDF bytes for a document
-  Future<Uint8List> downloadPdf(String documentId) async {
+  /// Baixa os bytes do PDF para um documento
+  ///
+  /// Este método baixa o arquivo PDF completo para o ID do documento fornecido
+  /// e o retorna como um array de bytes.
+  ///
+  /// [idDocumento] é o ID do documento obtido de [obterIdDocumento]
+  ///
+  /// Retorna o arquivo PDF como um [Uint8List]
+  ///
+  /// Lança [ExcecaoDocumentoNaoEncontrado] se o PDF não for encontrado
+  /// Lança [ExcecaoApiNfe] para outros erros da API
+  /// Lança [ExcecaoRede] para erros relacionados à rede
+  /// Lança [ExcecaoTempoEsgotado] se o download expirar
+  Future<Uint8List> baixarPdf(String idDocumento) async {
     try {
-      final response = await _dio.get(
-        NfeConstants.nfeRelatorioUrl,
-        queryParameters: {'id': documentId},
+      final resposta = await _dio.get(
+        ConstantesNfe.urlRelatorioNfe,
+        queryParameters: {'id': idDocumento},
         options: Options(
           responseType: ResponseType.bytes,
           headers: {
-            'Accept':
-                'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
           validateStatus: (status) => status != null && status < 500,
         ),
       );
 
-      if (response.statusCode == 404) {
-        throw DocumentNotFoundException(
-          'PDF not found for document ID: $documentId',
-          statusCode: response.statusCode,
+      if (resposta.statusCode == 404) {
+        throw ExcecaoDocumentoNaoEncontrado(
+          'PDF não encontrado para o ID do documento: $idDocumento',
+          codigoStatus: resposta.statusCode,
         );
       }
 
-      if (response.statusCode != 200) {
-        throw NfeApiException(
-          'Failed to download PDF: ${response.statusMessage}',
-          statusCode: response.statusCode,
+      if (resposta.statusCode != 200) {
+        throw ExcecaoApiNfe(
+          'Falha ao baixar PDF: ${resposta.statusMessage}',
+          codigoStatus: resposta.statusCode,
         );
       }
 
-      return Uint8List.fromList(response.data as List<int>);
-    } on DioException catch (e, stackTrace) {
-      if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout) {
-        throw TimeoutException('PDF download timed out', e, stackTrace);
+      return Uint8List.fromList(resposta.data as List<int>);
+    } on DioException catch (erro, rastreamentoPilha) {
+      if (erro.type == DioExceptionType.connectionTimeout || erro.type == DioExceptionType.receiveTimeout) {
+        throw ExcecaoTempoEsgotado('Download do PDF expirou', erro, rastreamentoPilha);
       }
-      throw NetworkException('Network error downloading PDF', e, stackTrace);
+      throw ExcecaoRede('Erro de rede ao baixar PDF', erro, rastreamentoPilha);
     }
   }
 
-  /// Extracts document ID from HTML response
-  /// This is a simplified version - actual implementation may need to be adjusted
-  /// based on the real HTML structure
-  String? _extractDocumentIdFromHtml(String html) {
-    // Look for patterns like: relatorioNotaFiscal.action?id=XXXXX
+  /// Extrai o ID do documento da resposta HTML
+  ///
+  /// Este método analisa a resposta HTML do endpoint documentos.action
+  /// e extrai o ID do documento usando um padrão de expressão regular.
+  ///
+  /// O padrão procura por URLs contendo "relatorioNotaFiscal.action?id="
+  /// e extrai o valor do ID.
+  ///
+  /// [html] é o conteúdo HTML da resposta documentos.action
+  ///
+  /// Retorna o ID do documento se encontrado, ou `null` se não encontrado
+  String? _extrairIdDocumentoDoHtml(String html) {
+    // Procurar padrões como: relatorioNotaFiscal.action?id=XXXXX
     final regex = RegExp(r'relatorioNotaFiscal\.action\?id=([^"&\s]+)');
-    final match = regex.firstMatch(html);
-    return match?.group(1);
+    final correspondencia = regex.firstMatch(html);
+    return correspondencia?.group(1);
   }
 
-  /// Disposes resources
-  void dispose() {
+  /// Libera recursos
+  ///
+  /// Fecha a instância Dio subjacente e libera todos os recursos.
+  /// Sempre chame este método quando terminar de usar o cliente.
+  void liberar() {
     _dio.close();
   }
 }

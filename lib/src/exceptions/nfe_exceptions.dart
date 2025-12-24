@@ -1,113 +1,129 @@
-/// Base exception for NFe downloader
-abstract class NfeException implements Exception {
-  /// The error message
-  final String message;
+/// Exceção base para o baixador de NFe
+abstract class ExcecaoNfe implements Exception {
+  /// A mensagem de erro
+  final String mensagem;
 
-  /// The original error that caused this exception (if any)
-  final dynamic originalError;
+  /// O erro original que causou esta exceção (se houver)
+  final dynamic erroOriginal;
 
-  /// The stack trace (if available)
-  final StackTrace? stackTrace;
+  /// O rastreamento de pilha (se disponível)
+  final StackTrace? rastreamentoPilha;
 
-  const NfeException(this.message, [this.originalError, this.stackTrace]);
-
-  @override
-  String toString() =>
-      'NfeException: $message${originalError != null ? ' ($originalError)' : ''}';
-}
-
-/// Exception thrown when Anti-Captcha API fails
-class AntiCaptchaException extends NfeException {
-  /// The error code returned by Anti-Captcha
-  final String? errorCode;
-
-  const AntiCaptchaException(
-    String message, {
-    this.errorCode,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(message, originalError, stackTrace);
+  const ExcecaoNfe(this.mensagem, [this.erroOriginal, this.rastreamentoPilha]);
 
   @override
   String toString() =>
-      'AntiCaptchaException: $message${errorCode != null ? ' (code: $errorCode)' : ''}';
+      'ExcecaoNfe: $mensagem${erroOriginal != null ? ' ($erroOriginal)' : ''}';
 }
 
-/// Exception thrown when captcha solving times out
-class CaptchaTimeoutException extends NfeException {
-  const CaptchaTimeoutException(
-    super.message, [
-    super.originalError,
-    super.stackTrace,
+/// Exceção lançada quando a API Anti-Captcha falha
+class ExcecaoAntiCaptcha extends ExcecaoNfe {
+  /// O código de erro retornado pelo Anti-Captcha
+  final String? codigoErro;
+
+  /// Cria uma [ExcecaoAntiCaptcha] com a [mensagem] fornecida.
+  /// 
+  /// Opcionalmente inclui um [codigoErro] da API Anti-Captcha,
+  /// [erroOriginal] que causou esta exceção, e [rastreamentoPilha].
+  const ExcecaoAntiCaptcha(
+    String mensagem, {
+    this.codigoErro,
+    dynamic erroOriginal,
+    StackTrace? rastreamentoPilha,
+  }) : super(mensagem, erroOriginal, rastreamentoPilha);
+
+  @override
+  String toString() =>
+      'ExcecaoAntiCaptcha: $mensagem${codigoErro != null ? ' (código: $codigoErro)' : ''}';
+}
+
+/// Exceção lançada quando a resolução do captcha expira
+class ExcecaoTempoEsgotadoCaptcha extends ExcecaoNfe {
+  /// Cria uma [ExcecaoTempoEsgotadoCaptcha] com a [mensagem] fornecida.
+  /// 
+  /// Opcionalmente inclui [erroOriginal] que causou esta exceção
+  /// e [rastreamentoPilha].
+  const ExcecaoTempoEsgotadoCaptcha(
+    super.mensagem, [
+    super.erroOriginal,
+    super.rastreamentoPilha,
   ]);
 
   @override
-  String toString() => 'CaptchaTimeoutException: $message';
+  String toString() => 'ExcecaoTempoEsgotadoCaptcha: $mensagem';
 }
 
-/// Exception thrown when NFe-Cidades API fails
-class NfeApiException extends NfeException {
-  /// The HTTP status code (if applicable)
-  final int? statusCode;
+/// Exceção lançada quando a API NFe-Cidades falha
+class ExcecaoApiNfe extends ExcecaoNfe {
+  /// O código de status HTTP (se aplicável)
+  final int? codigoStatus;
 
-  const NfeApiException(
-    String message, {
-    this.statusCode,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(message, originalError, stackTrace);
+  const ExcecaoApiNfe(
+    String mensagem, {
+    this.codigoStatus,
+    dynamic erroOriginal,
+    StackTrace? rastreamentoPilha,
+  }) : super(mensagem, erroOriginal, rastreamentoPilha);
 
   @override
   String toString() =>
-      'NfeApiException: $message${statusCode != null ? ' (HTTP $statusCode)' : ''}';
+      'ExcecaoApiNfe: $mensagem${codigoStatus != null ? ' (HTTP $codigoStatus)' : ''}';
 }
 
-/// Exception thrown when document is not found
-class DocumentNotFoundException extends NfeApiException {
-  const DocumentNotFoundException(
-    super.message, {
-    super.statusCode,
-    super.originalError,
-    super.stackTrace,
+/// Exceção lançada quando o documento não é encontrado
+class ExcecaoDocumentoNaoEncontrado extends ExcecaoApiNfe {
+  /// Cria uma [ExcecaoDocumentoNaoEncontrado] com a [mensagem] fornecida.
+  /// 
+  /// Opcionalmente inclui [codigoStatus] da resposta HTTP,
+  /// [erroOriginal] que causou esta exceção, e [rastreamentoPilha].
+  const ExcecaoDocumentoNaoEncontrado(
+    super.mensagem, {
+    super.codigoStatus,
+    super.erroOriginal,
+    super.rastreamentoPilha,
   });
 
   @override
-  String toString() => 'DocumentNotFoundException: $message';
+  String toString() => 'ExcecaoDocumentoNaoEncontrado: $mensagem';
 }
 
-/// Exception thrown when senha is invalid
-class InvalidSenhaException extends NfeApiException {
-  const InvalidSenhaException(
-    super.message, {
-    super.statusCode,
-    super.originalError,
-    super.stackTrace,
+/// Exceção lançada quando a senha é inválida
+class ExcecaoSenhaInvalida extends ExcecaoApiNfe {
+  /// Cria uma [ExcecaoSenhaInvalida] com a [mensagem] fornecida.
+  /// 
+  /// Opcionalmente inclui [codigoStatus] da resposta HTTP,
+  /// [erroOriginal] que causou esta exceção, e [rastreamentoPilha].
+  const ExcecaoSenhaInvalida(
+    super.mensagem, {
+    super.codigoStatus,
+    super.erroOriginal,
+    super.rastreamentoPilha,
   });
 
   @override
-  String toString() => 'InvalidSenhaException: $message';
+  String toString() => 'ExcecaoSenhaInvalida: $mensagem';
 }
 
-/// Exception thrown for network-related errors
-class NetworkException extends NfeException {
-  const NetworkException(
-    super.message, [
-    super.originalError,
-    super.stackTrace,
+/// Exceção lançada para erros relacionados à rede
+class ExcecaoRede extends ExcecaoNfe {
+  const ExcecaoRede(
+    super.mensagem, [
+    super.erroOriginal,
+    super.rastreamentoPilha,
   ]);
 
   @override
-  String toString() => 'NetworkException: $message';
+  String toString() => 'ExcecaoRede: $mensagem';
 }
 
-/// Exception thrown when operation times out
-class TimeoutException extends NfeException {
-  const TimeoutException(
-    super.message, [
-    super.originalError,
-    super.stackTrace,
+/// Exceção lançada quando a operação expira
+class ExcecaoTempoEsgotado extends ExcecaoNfe {
+  const ExcecaoTempoEsgotado(
+    super.mensagem, [
+    super.erroOriginal,
+    super.rastreamentoPilha,
   ]);
 
   @override
-  String toString() => 'TimeoutException: $message';
+  String toString() => 'ExcecaoTempoEsgotado: $mensagem';
 }

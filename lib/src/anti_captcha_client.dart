@@ -5,129 +5,177 @@ import 'constants.dart';
 import 'exceptions/nfe_exceptions.dart';
 import 'models/anti_captcha_models.dart';
 
-/// Client for interacting with Anti-Captcha API
-class AntiCaptchaClient {
-  final String apiKey;
+/// Cliente para interagir com a API Anti-Captcha
+///
+/// Esta classe trata todas as interações com o serviço Anti-Captcha,
+/// incluindo criação de tarefas de resolução de captcha e polling de resultados.
+///
+/// Ela suporta desafios reCAPTCHA v2 e faz polling automático da API
+/// até que o captcha seja resolvido ou ocorra um timeout.
+class ClienteAntiCaptcha {
+  /// A chave da API Anti-Captcha
+  ///
+  /// Obtenha sua chave de API em https://anti-captcha.com
+  final String chaveApi;
   final Dio _dio;
 
-  AntiCaptchaClient({required this.apiKey, Dio? dio}) : _dio = dio ?? Dio();
-
-  /// Solves a reCAPTCHA v2 challenge and returns the gRecaptchaResponse token
+  /// Cria uma nova instância de [ClienteAntiCaptcha]
   ///
-  /// Throws [AntiCaptchaException] if the API returns an error
-  /// Throws [CaptchaTimeoutException] if solving times out
-  /// Throws [NetworkException] for network-related errors
-  Future<String> solveRecaptchaV2({
-    required String websiteUrl,
-    required String siteKey,
-    Duration? maxWaitTime,
-    Duration? pollingInterval,
+  /// [chaveApi] é obrigatório - obtenha em https://anti-captcha.com
+  /// [dio] é opcional - forneça uma instância Dio personalizada se necessário
+  ClienteAntiCaptcha({required this.chaveApi, Dio? dio}) : _dio = dio ?? Dio();
+
+  /// Resolve um desafio reCAPTCHA v2 e retorna o token gRecaptchaResponse
+  ///
+  /// Este método cria uma nova tarefa de resolução de captcha, faz polling da API Anti-Captcha
+  /// até que o captcha seja resolvido, e retorna o token da solução.
+  ///
+  /// [urlSite] é a URL do site onde o captcha é exibido
+  /// [chaveSite] é a chave do site reCAPTCHA v2
+  /// [tempoMaximoEspera] é o tempo máximo para aguardar a resolução do captcha
+  ///   (padrão: [ConstantesNfe.tempoMaximoPollingCaptcha])
+  /// [intervaloPolling] é o intervalo entre requisições de polling
+  ///   (padrão: [ConstantesNfe.intervaloPollingCaptcha])
+  ///
+  /// Retorna o token gRecaptchaResponse que pode ser usado para enviar formulários
+  ///
+  /// Lança [ExcecaoAntiCaptcha] se a API retornar um erro
+  /// Lança [ExcecaoTempoEsgotadoCaptcha] se a resolução expirar
+  /// Lança [ExcecaoRede] para erros relacionados à rede
+  Future<String> resolverRecaptchaV2({
+    required String urlSite,
+    required String chaveSite,
+    Duration? tempoMaximoEspera,
+    Duration? intervaloPolling,
   }) async {
-    final maxWait = maxWaitTime ?? NfeConstants.captchaMaxPollingTime;
-    final pollInterval = pollingInterval ?? NfeConstants.captchaPollingInterval;
+    final tempoMaximo = tempoMaximoEspera ?? ConstantesNfe.tempoMaximoPollingCaptcha;
+    final intervalo = intervaloPolling ?? ConstantesNfe.intervaloPollingCaptcha;
 
-    // Step 1: Create task
-    final taskId = await _createTask(websiteUrl, siteKey);
+    // Passo 1: Criar tarefa
+    final idTarefa = await _criarTarefa(urlSite, chaveSite);
 
-    // Step 2: Poll for result
-    final startTime = DateTime.now();
-    while (DateTime.now().difference(startTime) < maxWait) {
-      await Future.delayed(pollInterval);
+    // Passo 2: Fazer polling do resultado
+    final tempoInicio = DateTime.now();
+    while (DateTime.now().difference(tempoInicio) < tempoMaximo) {
+      await Future.delayed(intervalo);
 
-      final result = await _getTaskResult(taskId);
+      final resultado = await _obterResultadoTarefa(idTarefa);
 
-      if (result.hasError) {
-        throw AntiCaptchaException(
-          result.errorDescription ?? 'Unknown error from Anti-Captcha',
-          errorCode: result.errorCode,
+      if (resultado.temErro) {
+        throw ExcecaoAntiCaptcha(
+          resultado.descricaoErro ?? 'Erro desconhecido do Anti-Captcha',
+          codigoErro: resultado.codigoErro,
         );
       }
 
-      if (result.isReady && result.gRecaptchaResponse != null) {
-        return result.gRecaptchaResponse!;
+      if (resultado.estaPronto && resultado.respostaRecaptcha != null) {
+        return resultado.respostaRecaptcha!;
       }
 
-      // Continue polling if still processing
-      if (!result.isProcessing) {
-        throw AntiCaptchaException('Unexpected status: ${result.status}');
+      // Continuar polling se ainda estiver processando
+      if (!resultado.estaProcessando) {
+        throw ExcecaoAntiCaptcha('Status inesperado: ${resultado.status}');
       }
     }
 
-    throw CaptchaTimeoutException(
-      'Captcha solving timed out after ${maxWait.inSeconds} seconds',
+    throw ExcecaoTempoEsgotadoCaptcha(
+      'Resolução do captcha expirou após ${tempoMaximo.inSeconds} segundos',
     );
   }
 
-  /// Creates a captcha task and returns the task ID
-  Future<int> _createTask(String websiteUrl, String siteKey) async {
+  /// Cria uma tarefa de captcha e retorna o ID da tarefa
+  ///
+  /// Este é um método interno que envia uma requisição para a API Anti-Captcha
+  /// para criar uma nova tarefa de resolução de reCAPTCHA v2.
+  ///
+  /// [urlSite] é a URL do site onde o captcha é exibido
+  /// [chaveSite] é a chave do site reCAPTCHA v2
+  ///
+  /// Retorna o ID da tarefa atribuído pelo Anti-Captcha
+  ///
+  /// Lança [ExcecaoAntiCaptcha] se a criação da tarefa falhar
+  /// Lança [ExcecaoRede] para erros relacionados à rede
+  Future<int> _criarTarefa(String urlSite, String chaveSite) async {
     try {
-      final request = AntiCaptchaCreateTaskRequest(
-        clientKey: apiKey,
-        task: RecaptchaV2TaskProxyless(
-          websiteURL: websiteUrl,
-          websiteKey: siteKey,
+      final requisicao = RequisicaoCriarTarefaAntiCaptcha(
+        chaveCliente: chaveApi,
+        tarefa: TarefaRecaptchaV2SemProxy(
+          urlSite: urlSite,
+          chaveSite: chaveSite,
         ),
       );
 
-      final response = await _dio.post(
-        NfeConstants.antiCaptchaCreateTaskUrl,
-        data: jsonEncode(request.toJson()),
+      final resposta = await _dio.post(
+        ConstantesNfe.urlCriarTarefaAntiCaptcha,
+        data: jsonEncode(requisicao.paraJson()),
         options: Options(headers: {'Content-Type': 'application/json'}),
       );
 
-      final result = AntiCaptchaCreateTaskResponse.fromJson(
-        response.data as Map<String, dynamic>,
+      final resultado = RespostaCriarTarefaAntiCaptcha.deJson(
+        resposta.data as Map<String, dynamic>,
       );
 
-      if (result.hasError) {
-        throw AntiCaptchaException(
-          result.errorDescription ?? 'Failed to create captcha task',
-          errorCode: result.errorCode,
+      if (resultado.temErro) {
+        throw ExcecaoAntiCaptcha(
+          resultado.descricaoErro ?? 'Falha ao criar tarefa de captcha',
+          codigoErro: resultado.codigoErro,
         );
       }
 
-      if (result.taskId == null) {
-        throw AntiCaptchaException('No task ID returned from Anti-Captcha');
+      if (resultado.idTarefa == null) {
+        throw const ExcecaoAntiCaptcha('Nenhum ID de tarefa retornado do Anti-Captcha');
       }
 
-      return result.taskId!;
-    } on DioException catch (e, stackTrace) {
-      throw NetworkException(
-        'Network error creating captcha task',
-        e,
-        stackTrace,
+      return resultado.idTarefa!;
+    } on DioException catch (erro, rastreamentoPilha) {
+      throw ExcecaoRede(
+        'Erro de rede ao criar tarefa de captcha',
+        erro,
+        rastreamentoPilha,
       );
     }
   }
 
-  /// Gets the result of a captcha task
-  Future<AntiCaptchaGetResultResponse> _getTaskResult(int taskId) async {
+  /// Obtém o resultado de uma tarefa de captcha
+  ///
+  /// Este é um método interno que faz polling da API Anti-Captcha para verificar
+  /// o status de uma tarefa de resolução de captcha.
+  ///
+  /// [idTarefa] é o ID da tarefa retornado de [_criarTarefa]
+  ///
+  /// Retorna a resposta do resultado da tarefa contendo status e solução
+  ///
+  /// Lança [ExcecaoRede] para erros relacionados à rede
+  Future<RespostaObterResultadoAntiCaptcha> _obterResultadoTarefa(int idTarefa) async {
     try {
-      final request = AntiCaptchaGetResultRequest(
-        clientKey: apiKey,
-        taskId: taskId,
+      final requisicao = RequisicaoObterResultadoAntiCaptcha(
+        chaveCliente: chaveApi,
+        idTarefa: idTarefa,
       );
 
-      final response = await _dio.post(
-        NfeConstants.antiCaptchaGetResultUrl,
-        data: jsonEncode(request.toJson()),
+      final resposta = await _dio.post(
+        ConstantesNfe.urlObterResultadoAntiCaptcha,
+        data: jsonEncode(requisicao.paraJson()),
         options: Options(headers: {'Content-Type': 'application/json'}),
       );
 
-      return AntiCaptchaGetResultResponse.fromJson(
-        response.data as Map<String, dynamic>,
+      return RespostaObterResultadoAntiCaptcha.deJson(
+        resposta.data as Map<String, dynamic>,
       );
-    } on DioException catch (e, stackTrace) {
-      throw NetworkException(
-        'Network error getting captcha result',
-        e,
-        stackTrace,
+    } on DioException catch (erro, rastreamentoPilha) {
+      throw ExcecaoRede(
+        'Erro de rede ao obter resultado do captcha',
+        erro,
+        rastreamentoPilha,
       );
     }
   }
 
-  /// Disposes resources
-  void dispose() {
+  /// Libera recursos
+  ///
+  /// Fecha a instância Dio subjacente e libera todos os recursos.
+  /// Sempre chame este método quando terminar de usar o cliente.
+  void liberar() {
     _dio.close();
   }
 }

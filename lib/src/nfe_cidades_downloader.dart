@@ -6,126 +6,126 @@ import 'constants.dart';
 import 'models/nfe_download_result.dart';
 import 'exceptions/nfe_exceptions.dart';
 
-/// Main class for downloading NFe documents from nfe-cidades.com.br
+/// Classe principal para baixar documentos NFe do site nfe-cidades.com.br
 ///
-/// This class uses Anti-Captcha service to solve reCAPTCHA challenges
-/// and then downloads NFe documents.
+/// Esta classe usa o serviço Anti-Captcha para resolver desafios reCAPTCHA
+/// e então baixa documentos NFe.
 ///
-/// Example usage:
+/// Exemplo de uso:
 /// ```dart
-/// final downloader = NfeCidadesDownloader(antiCaptchaApiKey: 'YOUR_API_KEY');
+/// final baixador = BaixadorNfeCidades(chaveApiAntiCaptcha: 'SUA_CHAVE_API');
 /// try {
-///   final result = await downloader.downloadNfe(
+///   final resultado = await baixador.baixarNfe(
 ///     senha: 'ABCD1234567890',
-///     downloadBytes: true,
+///     baixarBytes: true,
 ///   );
-///   print('Download URL: ${result.downloadUrl}');
-///   if (result.pdfBytes != null) {
-///     // Save PDF to file
+///   print('URL de download: ${resultado.urlDownload}');
+///   if (resultado.bytesPdf != null) {
+///     // Salvar PDF em arquivo
 ///   }
 /// } finally {
-///   downloader.dispose();
+///   baixador.liberar();
 /// }
 /// ```
-class NfeCidadesDownloader {
-  final String antiCaptchaApiKey;
-  final AntiCaptchaClient _captchaClient;
-  final NfeApiClient _nfeClient;
+class BaixadorNfeCidades {
+  final String chaveApiAntiCaptcha;
+  final ClienteAntiCaptcha _clienteCaptcha;
+  final ClienteApiNfe _clienteNfe;
 
-  /// Creates a new NFe downloader instance
+  /// Cria uma nova instância do baixador de NFe
   ///
-  /// [antiCaptchaApiKey] is required - get it from https://anti-captcha.com
-  /// [dio] is optional - provide a custom Dio instance if needed
-  NfeCidadesDownloader({required this.antiCaptchaApiKey, Dio? dio})
-    : _captchaClient = AntiCaptchaClient(apiKey: antiCaptchaApiKey, dio: dio),
-      _nfeClient = NfeApiClient(dio: dio);
+  /// [chaveApiAntiCaptcha] é obrigatório - obtenha em https://anti-captcha.com
+  /// [dio] é opcional - forneça uma instância Dio personalizada se necessário
+  BaixadorNfeCidades({required this.chaveApiAntiCaptcha, Dio? dio})
+      : _clienteCaptcha = ClienteAntiCaptcha(chaveApi: chaveApiAntiCaptcha, dio: dio),
+        _clienteNfe = ClienteApiNfe(dio: dio);
 
-  /// Downloads an NFe document using the provided senha
+  /// Baixa um documento NFe usando a senha fornecida
   ///
-  /// [senha] is the formatted password (e.g., "ABCD1234567890")
-  /// [downloadBytes] determines whether to download the actual PDF bytes (default: false)
-  /// [timeout] sets the maximum time to wait for the entire operation
+  /// [senha] é a senha formatada (ex: "ABCD1234567890")
+  /// [baixarBytes] determina se deve baixar os bytes reais do PDF (padrão: false)
+  /// [tempoLimite] define o tempo máximo para aguardar toda a operação
   ///
-  /// Returns [NfeDownloadResult] containing the download URL and optionally the PDF bytes
+  /// Retorna [ResultadoDownloadNfe] contendo a URL de download e opcionalmente os bytes do PDF
   ///
-  /// Throws [InvalidSenhaException] if the senha is invalid
-  /// Throws [DocumentNotFoundException] if the document is not found
-  /// Throws [CaptchaTimeoutException] if captcha solving times out
-  /// Throws [AntiCaptchaException] if Anti-Captcha API fails
-  /// Throws [NfeApiException] for other NFe-Cidades API errors
-  /// Throws [NetworkException] for network-related errors
-  /// Throws [TimeoutException] if the operation times out
-  Future<NfeDownloadResult> downloadNfe({
+  /// Lança [ExcecaoSenhaInvalida] se a senha for inválida
+  /// Lança [ExcecaoDocumentoNaoEncontrado] se o documento não for encontrado
+  /// Lança [ExcecaoTempoEsgotadoCaptcha] se a resolução do captcha expirar
+  /// Lança [ExcecaoAntiCaptcha] se a API Anti-Captcha falhar
+  /// Lança [ExcecaoApiNfe] para outros erros da API NFe-Cidades
+  /// Lança [ExcecaoRede] para erros relacionados à rede
+  /// Lança [ExcecaoTempoEsgotado] se a operação expirar
+  Future<ResultadoDownloadNfe> baixarNfe({
     required String senha,
-    bool downloadBytes = false,
-    Duration? timeout,
+    bool baixarBytes = false,
+    Duration? tempoLimite,
   }) async {
-    final effectiveTimeout = timeout ?? NfeConstants.defaultTimeout;
+    final tempoLimiteEfetivo = tempoLimite ?? ConstantesNfe.tempoLimitePadrao;
 
     try {
       return await Future.any([
-        _downloadNfeInternal(senha: senha, downloadBytes: downloadBytes),
-        Future.delayed(effectiveTimeout).then((_) {
-          throw TimeoutException(
-            'Operation timed out after ${effectiveTimeout.inSeconds} seconds',
+        _baixarNfeInterno(senha: senha, baixarBytes: baixarBytes),
+        Future.delayed(tempoLimiteEfetivo).then((_) {
+          throw ExcecaoTempoEsgotado(
+            'Operação expirou após ${tempoLimiteEfetivo.inSeconds} segundos',
           );
         }),
       ]);
     } catch (e) {
-      if (e is NfeException) {
+      if (e is ExcecaoNfe) {
         rethrow;
       }
-      throw NfeApiException(
-        'Unexpected error during download',
-        originalError: e,
+      throw ExcecaoApiNfe(
+        'Erro inesperado durante o download',
+        erroOriginal: e,
       );
     }
   }
 
-  /// Internal implementation of the download process
-  Future<NfeDownloadResult> _downloadNfeInternal({
+  /// Implementação interna do processo de download
+  Future<ResultadoDownloadNfe> _baixarNfeInterno({
     required String senha,
-    required bool downloadBytes,
+    required bool baixarBytes,
   }) async {
-    // Step 1: Solve reCAPTCHA using Anti-Captcha
-    final captchaToken = await _captchaClient.solveRecaptchaV2(
-      websiteUrl: NfeConstants.nfeLandingPage,
-      siteKey: NfeConstants.recaptchaSiteKey,
+    // Passo 1: Resolver reCAPTCHA usando Anti-Captcha
+    final tokenCaptcha = await _clienteCaptcha.resolverRecaptchaV2(
+      urlSite: ConstantesNfe.urlPaginaInicialNfe,
+      chaveSite: ConstantesNfe.chaveSiteRecaptcha,
     );
 
-    // Step 2: Search for document using senha and captcha token
-    final encryptedData = await _nfeClient.buscarDocumento(
+    // Passo 2: Buscar documento usando senha e token do captcha
+    final dadosCriptografados = await _clienteNfe.buscarDocumento(
       senha: senha,
-      captchaToken: captchaToken,
+      tokenCaptcha: tokenCaptcha,
     );
 
-    // Step 3: Get document details and extract document ID
-    final documentId = await _nfeClient.getDocumentId(
+    // Passo 3: Obter detalhes do documento e extrair ID do documento
+    final idDocumento = await _clienteNfe.obterIdDocumento(
       senha: senha,
-      encryptedData: encryptedData,
+      dadosCriptografados: dadosCriptografados,
     );
 
-    // Step 4: Build download URL
-    final downloadUrl = '${NfeConstants.nfeRelatorioUrl}?id=$documentId';
+    // Passo 4: Construir URL de download
+    final urlDownload = '${ConstantesNfe.urlRelatorioNfe}?id=$idDocumento';
 
-    // Step 5: Optionally download PDF bytes
-    Uint8List? pdfBytes;
-    if (downloadBytes) {
-      pdfBytes = await _nfeClient.downloadPdf(documentId);
+    // Passo 5: Opcionalmente baixar bytes do PDF
+    Uint8List? bytesPdf;
+    if (baixarBytes) {
+      bytesPdf = await _clienteNfe.baixarPdf(idDocumento);
     }
 
-    return NfeDownloadResult(
-      downloadUrl: downloadUrl,
-      documentId: documentId,
-      pdfBytes: pdfBytes,
+    return ResultadoDownloadNfe(
+      urlDownload: urlDownload,
+      idDocumento: idDocumento,
+      bytesPdf: bytesPdf,
     );
   }
 
-  /// Disposes all resources
+  /// Libera todos os recursos
   ///
-  /// Call this when you're done using the downloader
-  void dispose() {
-    _captchaClient.dispose();
-    _nfeClient.dispose();
+  /// Chame isso quando terminar de usar o baixador
+  void liberar() {
+    _clienteCaptcha.liberar();
+    _clienteNfe.liberar();
   }
 }
