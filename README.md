@@ -25,8 +25,7 @@ Adicione ao seu `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  nfe_cidades_download:
-    path: ../nfe_cidades_download  # ou publique no pub.dev
+  nfe_cidades_download:  ^0.0.3
 ```
 
 Execute:

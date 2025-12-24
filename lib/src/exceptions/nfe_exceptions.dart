@@ -9,11 +9,14 @@ abstract class ExcecaoNfe implements Exception {
   /// O rastreamento de pilha (se disponível)
   final StackTrace? rastreamentoPilha;
 
+  /// Cria uma [ExcecaoNfe] com a [mensagem] fornecida.
+  ///
+  /// Opcionalmente inclui [erroOriginal] que causou esta exceção
+  /// e [rastreamentoPilha].
   const ExcecaoNfe(this.mensagem, [this.erroOriginal, this.rastreamentoPilha]);
 
   @override
-  String toString() =>
-      'ExcecaoNfe: $mensagem${erroOriginal != null ? ' ($erroOriginal)' : ''}';
+  String toString() => 'ExcecaoNfe: $mensagem${erroOriginal != null ? ' ($erroOriginal)' : ''}';
 }
 
 /// Exceção lançada quando a API Anti-Captcha falha
@@ -33,8 +36,7 @@ class ExcecaoAntiCaptcha extends ExcecaoNfe {
   }) : super(mensagem, erroOriginal, rastreamentoPilha);
 
   @override
-  String toString() =>
-      'ExcecaoAntiCaptcha: $mensagem${codigoErro != null ? ' (código: $codigoErro)' : ''}';
+  String toString() => 'ExcecaoAntiCaptcha: $mensagem${codigoErro != null ? ' (código: $codigoErro)' : ''}';
 }
 
 /// Exceção lançada quando a resolução do captcha expira
@@ -58,6 +60,10 @@ class ExcecaoApiNfe extends ExcecaoNfe {
   /// O código de status HTTP (se aplicável)
   final int? codigoStatus;
 
+  /// Cria uma [ExcecaoApiNfe] com a [mensagem] fornecida.
+  ///
+  /// Opcionalmente inclui um [codigoStatus] da resposta HTTP,
+  /// [erroOriginal] que causou esta exceção, e [rastreamentoPilha].
   const ExcecaoApiNfe(
     String mensagem, {
     this.codigoStatus,
@@ -66,8 +72,7 @@ class ExcecaoApiNfe extends ExcecaoNfe {
   }) : super(mensagem, erroOriginal, rastreamentoPilha);
 
   @override
-  String toString() =>
-      'ExcecaoApiNfe: $mensagem${codigoStatus != null ? ' (HTTP $codigoStatus)' : ''}';
+  String toString() => 'ExcecaoApiNfe: $mensagem${codigoStatus != null ? ' (HTTP $codigoStatus)' : ''}';
 }
 
 /// Exceção lançada quando o documento não é encontrado
@@ -106,6 +111,10 @@ class ExcecaoSenhaInvalida extends ExcecaoApiNfe {
 
 /// Exceção lançada para erros relacionados à rede
 class ExcecaoRede extends ExcecaoNfe {
+  /// Cria uma [ExcecaoRede] com a [mensagem] fornecida.
+  ///
+  /// Opcionalmente inclui [erroOriginal] que causou esta exceção
+  /// e [rastreamentoPilha].
   const ExcecaoRede(
     super.mensagem, [
     super.erroOriginal,
@@ -118,6 +127,10 @@ class ExcecaoRede extends ExcecaoNfe {
 
 /// Exceção lançada quando a operação expira
 class ExcecaoTempoEsgotado extends ExcecaoNfe {
+  /// Cria uma [ExcecaoTempoEsgotado] com a [mensagem] fornecida.
+  ///
+  /// Opcionalmente inclui [erroOriginal] que causou esta exceção
+  /// e [rastreamentoPilha].
   const ExcecaoTempoEsgotado(
     super.mensagem, [
     super.erroOriginal,

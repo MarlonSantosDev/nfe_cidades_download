@@ -28,6 +28,10 @@ import 'exceptions/nfe_exceptions.dart';
 /// }
 /// ```
 class BaixadorNfeCidades {
+  /// Chave da API Anti-Captcha usada para resolver reCAPTCHA
+  ///
+  /// Esta chave é obrigatória e pode ser obtida em https://anti-captcha.com
+  /// após criar uma conta no serviço.
   final String chaveApiAntiCaptcha;
   final ClienteAntiCaptcha _clienteCaptcha;
   final ClienteApiNfe _clienteNfe;
@@ -37,8 +41,7 @@ class BaixadorNfeCidades {
   /// [chaveApiAntiCaptcha] é obrigatório - obtenha em https://anti-captcha.com
   /// [dio] é opcional - forneça uma instância Dio personalizada se necessário
   BaixadorNfeCidades({required this.chaveApiAntiCaptcha, Dio? dio})
-      : _clienteCaptcha =
-            ClienteAntiCaptcha(chaveApi: chaveApiAntiCaptcha, dio: dio),
+      : _clienteCaptcha = ClienteAntiCaptcha(chaveApi: chaveApiAntiCaptcha, dio: dio),
         _clienteNfe = ClienteApiNfe(dio: dio);
 
   /// Baixa um documento NFe usando a senha fornecida

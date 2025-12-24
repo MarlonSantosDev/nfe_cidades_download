@@ -1,9 +1,13 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
-import 'package:dio_cookie_manager/dio_cookie_manager.dart';
-import 'package:cookie_jar/cookie_jar.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+// Imports condicionais: cookie_jar não funciona na web (usa dart:io)
+// Na web, o navegador gerencia cookies automaticamente
+import 'package:cookie_jar/cookie_jar.dart'
+    if (dart.library.html) 'cookie_jar_stub.dart';
+import 'package:dio_cookie_manager/dio_cookie_manager.dart'
+    if (dart.library.html) 'dio_cookie_manager_stub.dart';
 import 'constants.dart';
 import 'exceptions/nfe_exceptions.dart';
 
