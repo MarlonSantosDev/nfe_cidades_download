@@ -48,7 +48,8 @@ class ClienteAntiCaptcha {
     Duration? tempoMaximoEspera,
     Duration? intervaloPolling,
   }) async {
-    final tempoMaximo = tempoMaximoEspera ?? ConstantesNfe.tempoMaximoPollingCaptcha;
+    final tempoMaximo =
+        tempoMaximoEspera ?? ConstantesNfe.tempoMaximoPollingCaptcha;
     final intervalo = intervaloPolling ?? ConstantesNfe.intervaloPollingCaptcha;
 
     // Passo 1: Criar tarefa
@@ -123,7 +124,8 @@ class ClienteAntiCaptcha {
       }
 
       if (resultado.idTarefa == null) {
-        throw const ExcecaoAntiCaptcha('Nenhum ID de tarefa retornado do Anti-Captcha');
+        throw const ExcecaoAntiCaptcha(
+            'Nenhum ID de tarefa retornado do Anti-Captcha');
       }
 
       return resultado.idTarefa!;
@@ -146,7 +148,8 @@ class ClienteAntiCaptcha {
   /// Retorna a resposta do resultado da tarefa contendo status e solução
   ///
   /// Lança [ExcecaoRede] para erros relacionados à rede
-  Future<RespostaObterResultadoAntiCaptcha> _obterResultadoTarefa(int idTarefa) async {
+  Future<RespostaObterResultadoAntiCaptcha> _obterResultadoTarefa(
+      int idTarefa) async {
     try {
       final requisicao = RequisicaoObterResultadoAntiCaptcha(
         chaveCliente: chaveApi,

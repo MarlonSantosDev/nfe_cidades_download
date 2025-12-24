@@ -22,7 +22,7 @@ class ExcecaoAntiCaptcha extends ExcecaoNfe {
   final String? codigoErro;
 
   /// Cria uma [ExcecaoAntiCaptcha] com a [mensagem] fornecida.
-  /// 
+  ///
   /// Opcionalmente inclui um [codigoErro] da API Anti-Captcha,
   /// [erroOriginal] que causou esta exceção, e [rastreamentoPilha].
   const ExcecaoAntiCaptcha(
@@ -40,7 +40,7 @@ class ExcecaoAntiCaptcha extends ExcecaoNfe {
 /// Exceção lançada quando a resolução do captcha expira
 class ExcecaoTempoEsgotadoCaptcha extends ExcecaoNfe {
   /// Cria uma [ExcecaoTempoEsgotadoCaptcha] com a [mensagem] fornecida.
-  /// 
+  ///
   /// Opcionalmente inclui [erroOriginal] que causou esta exceção
   /// e [rastreamentoPilha].
   const ExcecaoTempoEsgotadoCaptcha(
@@ -73,7 +73,7 @@ class ExcecaoApiNfe extends ExcecaoNfe {
 /// Exceção lançada quando o documento não é encontrado
 class ExcecaoDocumentoNaoEncontrado extends ExcecaoApiNfe {
   /// Cria uma [ExcecaoDocumentoNaoEncontrado] com a [mensagem] fornecida.
-  /// 
+  ///
   /// Opcionalmente inclui [codigoStatus] da resposta HTTP,
   /// [erroOriginal] que causou esta exceção, e [rastreamentoPilha].
   const ExcecaoDocumentoNaoEncontrado(
@@ -90,7 +90,7 @@ class ExcecaoDocumentoNaoEncontrado extends ExcecaoApiNfe {
 /// Exceção lançada quando a senha é inválida
 class ExcecaoSenhaInvalida extends ExcecaoApiNfe {
   /// Cria uma [ExcecaoSenhaInvalida] com a [mensagem] fornecida.
-  /// 
+  ///
   /// Opcionalmente inclui [codigoStatus] da resposta HTTP,
   /// [erroOriginal] que causou esta exceção, e [rastreamentoPilha].
   const ExcecaoSenhaInvalida(

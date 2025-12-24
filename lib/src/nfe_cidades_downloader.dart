@@ -37,7 +37,8 @@ class BaixadorNfeCidades {
   /// [chaveApiAntiCaptcha] é obrigatório - obtenha em https://anti-captcha.com
   /// [dio] é opcional - forneça uma instância Dio personalizada se necessário
   BaixadorNfeCidades({required this.chaveApiAntiCaptcha, Dio? dio})
-      : _clienteCaptcha = ClienteAntiCaptcha(chaveApi: chaveApiAntiCaptcha, dio: dio),
+      : _clienteCaptcha =
+            ClienteAntiCaptcha(chaveApi: chaveApiAntiCaptcha, dio: dio),
         _clienteNfe = ClienteApiNfe(dio: dio);
 
   /// Baixa um documento NFe usando a senha fornecida

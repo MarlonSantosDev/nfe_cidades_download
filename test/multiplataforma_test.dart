@@ -80,7 +80,8 @@ void main() {
 
       test('deve lançar ExcecaoDocumentoNaoEncontrado', () {
         expect(
-          () => throw const ExcecaoDocumentoNaoEncontrado('Documento não encontrado'),
+          () => throw const ExcecaoDocumentoNaoEncontrado(
+              'Documento não encontrado'),
           throwsA(isA<ExcecaoDocumentoNaoEncontrado>()),
         );
       });

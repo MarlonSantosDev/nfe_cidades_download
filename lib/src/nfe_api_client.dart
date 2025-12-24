@@ -138,17 +138,22 @@ class ClienteApiNfe {
 
       // Se chegamos aqui, a estrutura da resposta é inesperada
       final stringResposta = resposta.data.toString();
-      final preview = stringResposta.length > 200 ? '${stringResposta.substring(0, 200)}...' : stringResposta;
+      final preview = stringResposta.length > 200
+          ? '${stringResposta.substring(0, 200)}...'
+          : stringResposta;
       throw ExcecaoApiNfe(
         'Resposta inválida de buscarDocumento. '
         'Esperado JSON com campo "validador" ou "data", ou string direta. '
         'Tipo recebido: ${resposta.data.runtimeType}, preview: $preview',
       );
     } on DioException catch (erro, rastreamentoPilha) {
-      if (erro.type == DioExceptionType.connectionTimeout || erro.type == DioExceptionType.receiveTimeout) {
-        throw ExcecaoTempoEsgotado('Requisição expirou', erro, rastreamentoPilha);
+      if (erro.type == DioExceptionType.connectionTimeout ||
+          erro.type == DioExceptionType.receiveTimeout) {
+        throw ExcecaoTempoEsgotado(
+            'Requisição expirou', erro, rastreamentoPilha);
       }
-      throw ExcecaoRede('Erro de rede em buscarDocumento', erro, rastreamentoPilha);
+      throw ExcecaoRede(
+          'Erro de rede em buscarDocumento', erro, rastreamentoPilha);
     }
   }
 
@@ -177,8 +182,10 @@ class ClienteApiNfe {
         queryParameters: {'senha': senha, 'data': dadosCriptografados},
         options: Options(
           headers: {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Referer': '${ConstantesNfe.urlBaseNfe}/public/documentos?senha=$senha&data=$dadosCriptografados',
+            'Accept':
+                'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Referer':
+                '${ConstantesNfe.urlBaseNfe}/public/documentos?senha=$senha&data=$dadosCriptografados',
           },
           validateStatus: (status) => status != null && status < 500,
         ),
@@ -204,15 +211,19 @@ class ClienteApiNfe {
       final idDocumento = _extrairIdDocumentoDoHtml(html);
 
       if (idDocumento == null) {
-        throw const ExcecaoApiNfe('Não foi possível extrair o ID do documento da resposta');
+        throw const ExcecaoApiNfe(
+            'Não foi possível extrair o ID do documento da resposta');
       }
 
       return idDocumento;
     } on DioException catch (erro, rastreamentoPilha) {
-      if (erro.type == DioExceptionType.connectionTimeout || erro.type == DioExceptionType.receiveTimeout) {
-        throw ExcecaoTempoEsgotado('Requisição expirou', erro, rastreamentoPilha);
+      if (erro.type == DioExceptionType.connectionTimeout ||
+          erro.type == DioExceptionType.receiveTimeout) {
+        throw ExcecaoTempoEsgotado(
+            'Requisição expirou', erro, rastreamentoPilha);
       }
-      throw ExcecaoRede('Erro de rede em obterIdDocumento', erro, rastreamentoPilha);
+      throw ExcecaoRede(
+          'Erro de rede em obterIdDocumento', erro, rastreamentoPilha);
     }
   }
 
@@ -237,7 +248,8 @@ class ClienteApiNfe {
         options: Options(
           responseType: ResponseType.bytes,
           headers: {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept':
+                'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
           validateStatus: (status) => status != null && status < 500,
         ),
@@ -259,8 +271,10 @@ class ClienteApiNfe {
 
       return Uint8List.fromList(resposta.data as List<int>);
     } on DioException catch (erro, rastreamentoPilha) {
-      if (erro.type == DioExceptionType.connectionTimeout || erro.type == DioExceptionType.receiveTimeout) {
-        throw ExcecaoTempoEsgotado('Download do PDF expirou', erro, rastreamentoPilha);
+      if (erro.type == DioExceptionType.connectionTimeout ||
+          erro.type == DioExceptionType.receiveTimeout) {
+        throw ExcecaoTempoEsgotado(
+            'Download do PDF expirou', erro, rastreamentoPilha);
       }
       throw ExcecaoRede('Erro de rede ao baixar PDF', erro, rastreamentoPilha);
     }
