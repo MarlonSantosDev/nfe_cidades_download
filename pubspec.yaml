@@ -23,4 +23,7 @@ dev_dependencies:
   mockito: ^5.6.1
   build_runner: ^2.10.4
 
+false_secrets:
+  - lib/src/constants.dart
+
 flutter:
