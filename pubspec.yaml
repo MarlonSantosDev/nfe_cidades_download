@@ -1,0 +1,26 @@
+name: nfe_cidades_download
+description: "Download NFe de nfe-cidades.com.br usando Anti-Captcha"
+version: 0.0.1
+homepage: https://github.com/MarlonSantosDev/nfe_cidades_download
+
+environment:
+  sdk: ^3.10.4
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+    
+  dio: ^5.9.0
+  cookie_jar: ^4.0.8
+  dio_cookie_manager: ^3.3.0
+  web: ^1.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  mockito: ^5.6.1
+  build_runner: ^2.10.4
+
+flutter:
