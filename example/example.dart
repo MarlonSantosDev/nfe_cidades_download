@@ -6,8 +6,8 @@ import 'package:nfe_cidades_download/nfe_cidades_download.dart';
 /// as plataformas (Web, Mobile, Desktop) com auto-dispose automático,
 /// salvamento multiplataforma e sistema de cache inteligente.
 ///
-const chaveApiAntiCaptcha = '7112f738d4e027fef1f55db83dc469c5';
-const senhaNfe = '17PI.QZNQ.HYQU.CYMM';
+const chaveApiAntiCaptcha = 'CHAVE_API_ANTI_CAPTCHA';
+const senhaNfe = 'SENHA_DA_NFE';
 void main() async {
   // Criar instância do baixador
   // Obtenha sua chave em: https://anti-captcha.com

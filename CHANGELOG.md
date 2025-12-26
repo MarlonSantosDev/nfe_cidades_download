@@ -3,13 +3,38 @@
 ## [1.0.0] - 2025-12-26
 ### Adicionado
 
+#### Sistema de Cache Inteligente
 - ✅ Sistema de cache inteligente usando `shared_preferences`
-- ✅ Limpeza de cache manual
-- ✅ Limpeza de cache por senha
-- ✅ Cache ativado por padrão
-- ✅ Cache desativado globalmente
-- ✅ Cache limpo globalmente
-- ✅ Cache limpo por senha
+- ✅ Cache ativado por padrão (transparente, zero configuração)
+- ✅ Cache tolerante a falhas (erros não afetam o download)
+- ✅ Cache multiplataforma (funciona em todas as plataformas Flutter)
+- ✅ Armazenamento persistente de NFes localmente
+- ✅ Redução de tempo de resposta de ~30s para <100ms em cache hits
+- ✅ Economia de créditos Anti-Captcha em acessos repetidos
+
+#### Arquitetura do Cache
+- ✅ Classe `NfeCacheConfig` para configuração global do cache
+- ✅ Classe `NfeCacheManager` para orquestração de operações de cache
+- ✅ Classe `NfeCacheStorage` para abstração do shared_preferences
+- ✅ Classe `NfeCacheEntry` para modelo serializável de dados em cache
+- ✅ Serialização/deserialização JSON automática
+- ✅ Prefixo de chaves (`nfe_cache:`) para isolamento de dados
+- ✅ Timestamp de cacheamento para rastreamento
+
+#### Controle do Cache
+- ✅ Cache ativado/desativado globalmente via `BaixadorNfeCidades.usarCache`
+- ✅ Limpeza de cache manual global (`BaixadorNfeCidades.limparCache()`)
+- ✅ Limpeza de cache por senha específica (`BaixadorNfeCidades.limparCachePorSenha()`)
+- ✅ Preservação de outros dados do shared_preferences ao limpar cache
+- ✅ Remoção seletiva apenas de chaves com prefixo de cache
+
+#### Funcionalidades Avançadas do Cache
+- ✅ Cache inteligente que verifica requisitos antes de retornar
+- ✅ Atualização automática de cache quando `baixarBytes=true` e cache não tem bytes
+- ✅ Reconstituição automática da função `salvar` a partir do cache
+- ✅ Suporte a cache com ou sem bytes do PDF
+- ✅ Tratamento transparente de erros (log apenas em modo debug)
+- ✅ Fire-and-forget para salvamento de cache (não bloqueia retorno)
 
 ## [0.0.2] - 2025-12-24
 

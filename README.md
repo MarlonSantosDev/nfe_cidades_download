@@ -34,7 +34,7 @@
 
 ```yaml
 dependencies:
-  nfe_cidades_download: ^1.1.0
+  nfe_cidades_download: ^1.0.0
 ```
 
 ```bash
