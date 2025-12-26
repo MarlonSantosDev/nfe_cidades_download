@@ -1,99 +1,147 @@
-library;
-
-/// Exemplo multiplataforma para uso do pacote nfe_cidades_download
-///
-/// IMPORTANTE: Este exemplo deve ser executado com Flutter, não com `dart` diretamente:
-///   - Para executar: `flutter run -d chrome` (web) ou `flutter run` (outras plataformas)
-///   - NÃO use: `dart example/exemplo.dart` (não funcionará porque o pacote usa Flutter)
-///
-/// Este exemplo funciona em todas as plataformas:
-///   - Web: Exibe informações (não salva arquivo)
-///   - Android, iOS, Windows, macOS, Linux: Salva arquivo PDF
-
 import 'package:nfe_cidades_download/nfe_cidades_download.dart';
 
-// Import condicional para dart:io (apenas em plataformas não-web)
-// Na web, usa um stub que lança erro explicativo
-import 'dart:io' if (dart.library.html) 'example/dart_io_stub.dart' show File;
+/// Exemplo de uso do pacote nfe_cidades_download
+///
+/// Este exemplo demonstra a API v1.0.0 unificada que funciona em todas
+/// as plataformas (Web, Mobile, Desktop) com auto-dispose automático
+/// e salvamento multiplataforma.
+void main() async {
+  // Criar instância do baixador
+  // Obtenha sua chave em: https://anti-captcha.com
+  const baixador = BaixadorNfeCidades(
+    chaveApiAntiCaptcha: 'SUA_CHAVE_API_ANTI_CAPTCHA',
+  );
 
-/// Verifica se podemos usar File (não estamos na web)
-/// Retorna true se File está disponível e funcional
-bool _canUseFile() {
+  print('🚀 Iniciando download de NFe...\n');
+
   try {
-    // Tenta criar um File temporário para verificar se dart:io está disponível
-    // Se File() não lançar exceção, estamos em uma plataforma não-web
-    File('__test_file_check__');
-    return true;
-  } catch (e) {
-    // Se lançou exceção, provavelmente estamos na web ou File não está disponível
-    return false;
+    // Download com auto-dispose automático!
+    // Não é mais necessário usar try/finally com baixador.liberar()
+    final resultado = await baixador(
+      senha: 'ABCD1234567890', // Substitua pela senha da sua NFe
+      baixarBytes: true, // true para baixar o PDF completo
+    );
+
+    // Acesso type-safe via extensions
+    print('✅ Download concluído com sucesso!\n');
+    print('📄 Informações da NFe:');
+    print('   URL: ${resultado.urlDownload}');
+    print('   ID do Documento: ${resultado.idDocumento}');
+    print('   Tamanho: ${resultado.tamanho} bytes\n');
+
+    // Salvamento multiplataforma - funciona em todas as plataformas!
+    // - Web: dispara download no browser
+    // - Mobile/Desktop: salva no diretório atual ou caminho customizado
+    print('💾 Salvando PDF...');
+    await resultado.salvar!('nota_fiscal.pdf');
+    print('✅ PDF salvo com sucesso: nota_fiscal.pdf\n');
+
+    // Também pode acessar diretamente como Map
+    print('📊 Acesso alternativo via Map:');
+    print('   ${resultado['idDocumento']}');
+    print('   ${resultado['tamanho']} bytes');
+
+    // Para JSON serialization, use bytesBase64
+    if (resultado.bytesBase64 != null) {
+      print('\n📦 Bytes disponíveis em base64 para serialização JSON');
+    }
+  } on ExcecaoSenhaInvalida catch (e) {
+    print('❌ Senha inválida: $e');
+  } on ExcecaoDocumentoNaoEncontrado catch (e) {
+    print('❌ Documento não encontrado: $e');
+  } on ExcecaoTempoEsgotadoCaptcha catch (e) {
+    print('❌ Timeout ao resolver captcha: $e');
+  } on ExcecaoAntiCaptcha catch (e) {
+    print('❌ Erro na API Anti-Captcha: $e');
+    print('   Verifique se você tem créditos suficientes em sua conta');
+  } on ExcecaoRede catch (e) {
+    print('❌ Erro de rede: $e');
+  } on ExcecaoNfe catch (e) {
+    print('❌ Erro: $e');
+  }
+
+  // ✨ Recursos liberados automaticamente!
+  // Não é mais necessário chamar baixador.liberar()
+  print('\n✨ Recursos liberados automaticamente (auto-dispose)');
+}
+
+/// Exemplo avançado: múltiplos downloads reutilizando conexões
+void exemploAvancado() async {
+  const baixador = BaixadorNfeCidades(
+    chaveApiAntiCaptcha: 'SUA_CHAVE_API',
+  );
+
+  // Para múltiplos downloads, use criarExecutor()
+  // Isso permite reutilizar as mesmas conexões HTTP
+  final executor = baixador.criarExecutor();
+
+  try {
+    print('📥 Baixando múltiplas NFes...\n');
+
+    final senhas = ['ABC123', 'DEF456', 'GHI789'];
+    final resultados = <Map<String, dynamic>>[];
+
+    for (final senha in senhas) {
+      print('   Baixando senha: $senha');
+      final resultado = await executor.baixarNfe(
+        senha: senha,
+        baixarBytes: true,
+      );
+      resultados.add(resultado);
+    }
+
+    print('\n💾 Salvando ${resultados.length} PDFs...');
+    for (var i = 0; i < resultados.length; i++) {
+      await resultados[i]['salvar']!('nota_$i.pdf');
+      print('   ✅ Salvo: nota_$i.pdf');
+    }
+
+    print('\n✅ Todos os downloads concluídos!');
+  } finally {
+    // Cleanup manual necessário apenas quando usar criarExecutor()
+    executor.liberar();
+    print('🧹 Recursos liberados manualmente');
   }
 }
 
-void main() async {
-  // Configure sua chave da API Anti-Captcha
-  // Obtenha em: https://anti-captcha.com
-  const apiKey = 'SUA_CHAVE_API_AQUI';
+/// Exemplo: apenas obter URL sem baixar bytes
+void exemploApenasUrl() async {
+  const baixador = BaixadorNfeCidades(
+    chaveApiAntiCaptcha: 'SUA_CHAVE_API',
+  );
 
-  // Crie uma instância do baixador
-  final baixador = BaixadorNfeCidades(chaveApiAntiCaptcha: apiKey);
+  final resultado = await baixador(
+    senha: 'ABCD1234567890',
+    baixarBytes: false, // Não baixa os bytes - apenas URL
+  );
+
+  print('URL: ${resultado.urlDownload}');
+  print('ID: ${resultado.idDocumento}');
+
+  // resultado.bytes será null
+  // resultado.salvar será null
+  assert(resultado.bytes == null);
+  assert(resultado.salvar == null);
+
+  // Use a URL para download manual se necessário
+  print('Use esta URL para download manual');
+}
+
+/// Exemplo: timeout customizado
+void exemploTimeout() async {
+  const baixador = BaixadorNfeCidades(
+    chaveApiAntiCaptcha: 'SUA_CHAVE_API',
+  );
 
   try {
-    print('Iniciando download da NFe...');
-
-    // Exemplo 1: Obter apenas a URL de download
-    final resultado = await baixador.baixarNfe(senha: 'ABCD1234567890');
-    print('✓ URL de download obtida: ${resultado.urlDownload}');
-    print('  ID do Documento: ${resultado.idDocumento}');
-
-    // Exemplo 2: Baixar a URL e os bytes do PDF
-    print('\nBaixando PDF completo...');
-    final resultadoComPdf = await baixador.baixarNfe(
+    final resultado = await baixador(
       senha: 'ABCD1234567890',
       baixarBytes: true,
-      tempoLimite: const Duration(minutes: 2),
+      tempoLimite: const Duration(minutes: 5), // Padrão é 3 minutos
     );
 
-    if (resultadoComPdf.bytesPdf != null) {
-      // Verifica se estamos na web tentando usar File
-      // Se File não estiver disponível ou lançar erro, estamos na web
-      final isWeb = !_canUseFile();
-      if (isWeb) {
-        // Na web, você pode usar a URL diretamente ou fazer download via JavaScript
-        print('✓ PDF baixado com sucesso!');
-        print('  Tamanho: ${resultadoComPdf.bytesPdf!.length} bytes');
-        print('  URL de download: ${resultadoComPdf.urlDownload}');
-        print(
-          '  Dica: Na web, use a URL para fazer download ou processe os bytes no navegador',
-        );
-      } else {
-        // Em plataformas nativas (Android, iOS, Desktop), salvar em arquivo
-        final file = File('${resultadoComPdf.idDocumento}.pdf');
-        await file.writeAsBytes(resultadoComPdf.bytesPdf!);
-        print('✓ PDF salvo com sucesso: ${file.path}');
-        print('  Tamanho: ${resultadoComPdf.bytesPdf!.length} bytes');
-      }
-    }
-  } on ExcecaoSenhaInvalida catch (e) {
-    print('✗ Senha inválida: $e');
-  } on ExcecaoDocumentoNaoEncontrado catch (e) {
-    print('✗ Documento não encontrado: $e');
-  } on ExcecaoTempoEsgotadoCaptcha catch (e) {
-    print('✗ Timeout ao resolver captcha: $e');
-    print('  Dica: O Anti-Captcha pode estar sobrecarregado. Tente novamente.');
-  } on ExcecaoAntiCaptcha catch (e) {
-    print('✗ Erro no Anti-Captcha: $e');
-    print('  Dica: Verifique se sua chave da API está correta e tem créditos.');
-  } on ExcecaoRede catch (e) {
-    print('✗ Erro de rede: $e');
-    print('  Dica: Verifique sua conexão com a internet.');
+    print('Sucesso: ${resultado.idDocumento}');
   } on ExcecaoTempoEsgotado catch (e) {
-    print('✗ Timeout: $e');
-  } on ExcecaoNfe catch (e) {
-    print('✗ Erro geral: $e');
-  } finally {
-    // Sempre limpar os recursos
-    baixador.liberar();
-    print('\nRecursos liberados.');
+    print('Operação expirou após 5 minutos: $e');
   }
 }
