@@ -16,7 +16,8 @@ abstract class ExcecaoNfe implements Exception {
   const ExcecaoNfe(this.mensagem, [this.erroOriginal, this.rastreamentoPilha]);
 
   @override
-  String toString() => 'ExcecaoNfe: $mensagem${erroOriginal != null ? ' ($erroOriginal)' : ''}';
+  String toString() =>
+      'ExcecaoNfe: $mensagem${erroOriginal != null ? ' ($erroOriginal)' : ''}';
 }
 
 /// Exceção lançada quando a API Anti-Captcha falha
@@ -36,7 +37,8 @@ class ExcecaoAntiCaptcha extends ExcecaoNfe {
   }) : super(mensagem, erroOriginal, rastreamentoPilha);
 
   @override
-  String toString() => 'ExcecaoAntiCaptcha: $mensagem${codigoErro != null ? ' (código: $codigoErro)' : ''}';
+  String toString() =>
+      'ExcecaoAntiCaptcha: $mensagem${codigoErro != null ? ' (código: $codigoErro)' : ''}';
 }
 
 /// Exceção lançada quando a resolução do captcha expira
@@ -72,7 +74,8 @@ class ExcecaoApiNfe extends ExcecaoNfe {
   }) : super(mensagem, erroOriginal, rastreamentoPilha);
 
   @override
-  String toString() => 'ExcecaoApiNfe: $mensagem${codigoStatus != null ? ' (HTTP $codigoStatus)' : ''}';
+  String toString() =>
+      'ExcecaoApiNfe: $mensagem${codigoStatus != null ? ' (HTTP $codigoStatus)' : ''}';
 }
 
 /// Exceção lançada quando o documento não é encontrado

@@ -201,7 +201,8 @@ class _BaixadorNfeExecutor implements NfeExecutor {
   ///
   /// [dio] é opcional - forneça uma instância Dio personalizada se necessário
   _BaixadorNfeExecutor({required this.chaveApiAntiCaptcha, Dio? dio})
-      : _clienteCaptcha = ClienteAntiCaptcha(chaveApi: chaveApiAntiCaptcha, dio: dio),
+      : _clienteCaptcha =
+            ClienteAntiCaptcha(chaveApi: chaveApiAntiCaptcha, dio: dio),
         _clienteNfe = ClienteApiNfe(dio: dio) {
     _cacheManager = NfeCacheManager();
   }
@@ -259,7 +260,8 @@ class _BaixadorNfeExecutor implements NfeExecutor {
       // Se baixarBytes=true mas cache não tem bytes, buscar da fonte
       if (baixarBytes && entryCache.bytesBase64 == null) {
         // Cache existe mas sem bytes - buscar da fonte
-        final resultado = await _baixarNfeInterno(senha: senha, baixarBytes: baixarBytes);
+        final resultado =
+            await _baixarNfeInterno(senha: senha, baixarBytes: baixarBytes);
 
         // Atualizar cache com bytes
         unawaited(_cacheManager.salvar(senha, resultado).catchError((erro) {
@@ -277,7 +279,8 @@ class _BaixadorNfeExecutor implements NfeExecutor {
     }
 
     // 3. Cache MISS - buscar da fonte
-    final resultado = await _baixarNfeInterno(senha: senha, baixarBytes: baixarBytes);
+    final resultado =
+        await _baixarNfeInterno(senha: senha, baixarBytes: baixarBytes);
 
     // 4. Salvar no cache (fire-and-forget, não bloqueia retorno)
     unawaited(_cacheManager.salvar(senha, resultado).catchError((erro) {

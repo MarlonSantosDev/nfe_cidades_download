@@ -13,4 +13,3 @@ class CookieJar {
 class CookieManager {
   CookieManager(CookieJar jar);
 }
-

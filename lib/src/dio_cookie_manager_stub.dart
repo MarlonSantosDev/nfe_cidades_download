@@ -9,4 +9,3 @@ import 'cookie_jar_stub.dart' show CookieJar;
 class CookieManager {
   CookieManager(CookieJar jar);
 }
-

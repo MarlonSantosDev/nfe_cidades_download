@@ -159,7 +159,8 @@ void exemploCache() async {
   print('⚡ Demonstração do Sistema de Cache\n');
 
   // Cache está ativado por padrão
-  print('📌 Cache Status: ${BaixadorNfeCidades.usarCache ? "Ativado" : "Desativado"}\n');
+  print(
+      '📌 Cache Status: ${BaixadorNfeCidades.usarCache ? "Ativado" : "Desativado"}\n');
 
   print('🔄 Primeira chamada (busca da fonte + salva no cache)...');
   final inicio1 = DateTime.now();
@@ -178,12 +179,14 @@ void exemploCache() async {
   print('📊 Comparação:');
   print('   Sem cache: ${duracao1.inSeconds}s');
   print('   Com cache: ${duracao2.inMilliseconds}ms');
-  print('   Ganho: ${(duracao1.inMilliseconds / duracao2.inMilliseconds).toStringAsFixed(1)}x mais rápido!\n');
+  print(
+      '   Ganho: ${(duracao1.inMilliseconds / duracao2.inMilliseconds).toStringAsFixed(1)}x mais rápido!\n');
 
   // Desabilitar cache
   print('❌ Desabilitando cache...');
   BaixadorNfeCidades.usarCache = false;
-  print('   Cache Status: ${BaixadorNfeCidades.usarCache ? "Ativado" : "Desativado"}\n');
+  print(
+      '   Cache Status: ${BaixadorNfeCidades.usarCache ? "Ativado" : "Desativado"}\n');
 
   print('🔄 Terceira chamada (cache desabilitado, busca da fonte)...');
   final inicio3 = DateTime.now();
