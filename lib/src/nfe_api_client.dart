@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'platform_detector.dart';
 // Imports condicionais: cookie_jar não funciona na web (usa dart:io)
 // Na web, o navegador gerencia cookies automaticamente
 import 'package:cookie_jar/cookie_jar.dart'
@@ -29,7 +29,7 @@ class ClienteApiNfe {
   ClienteApiNfe({Dio? dio, CookieJar? cookieJar}) : _dio = dio ?? Dio() {
     // Na web, o Dio gerencia cookies automaticamente através do navegador
     // Em outras plataformas, usamos CookieJar para gerenciar cookies
-    if (!kIsWeb) {
+    if (!PlatformDetector.isWeb) {
       final jar = cookieJar ?? CookieJar();
       _dio.interceptors.add(CookieManager(jar));
     }

@@ -1,263 +1,273 @@
-# NFe Cidades Downloader
+# NFe Cidades Download
 
-Pacote Dart/Flutter para baixar notas fiscais do portal [nfe-cidades.com.br](https://www.nfe-cidades.com.br) usando o serviço [Anti-Captcha](https://anti-captcha.com) para resolver reCAPTCHA v2 automaticamente.
+📦 Pacote **Dart/Flutter** para download de NFe de [nfe-cidades.com.br](https://www.nfe-cidades.com.br)
+
+## ✨ Características Principais
+
+- 🔄 **Auto-dispose automático** - Recursos liberados automaticamente
+- 🌐 **API unificada** - Mesma API funciona em Web, Mobile e Desktop
+- 📦 **Dart puro** - Funciona sem dependência do Flutter SDK
+- 📄 **Retorno Map/JSON** - Flexível e fácil de trabalhar
+- 💾 **Salvamento integrado** - Salva PDFs em todas as plataformas
 
 ## Características
 
+- ✅ Funciona em **todas as plataformas**: Web, Mobile (Android/iOS), Desktop (Windows/macOS/Linux)
+- ✅ **Dart puro** - não requer Flutter (mas funciona perfeitamente com Flutter também)
+- ✅ **Auto-dispose** - recursos liberados automaticamente, sem `finally` necessário
 - ✅ Resolve reCAPTCHA v2 automaticamente usando Anti-Captcha
-- ✅ Retorna URL de download direto da NFe
-- ✅ Opção para baixar os bytes do PDF automaticamente
+- ✅ Retorna URL de download + bytes do PDF
+- ✅ Salvamento de arquivos multiplataforma integrado
 - ✅ Timeout configurável
 - ✅ Gerenciamento automático de cookies de sessão
 - ✅ Exceções específicas para diferentes tipos de erro
-- ✅ API simples e fácil de usar
-- ✅ **Multiplataforma**: Funciona em Web, Android, iOS, Windows, macOS e Linux
+- ✅ Type-safe com extensions para Map
 
 ## Pré-requisitos
 
-1. **Chave da API Anti-Captcha**: Você precisa criar uma conta em [anti-captcha.com](https://anti-captcha.com) e obter sua chave de API
+1. **Chave da API Anti-Captcha**: Crie uma conta em [anti-captcha.com](https://anti-captcha.com) e obtenha sua chave de API
 2. **Créditos Anti-Captcha**: O serviço cobra aproximadamente $1.00 por 1000 captchas resolvidos
 3. **Senha da NFe**: A senha formatada da nota fiscal (ex: `ABCD1234567890`)
 
 ## Instalação
 
-Adicione ao seu `pubspec.yaml`:
-
 ```yaml
 dependencies:
-  nfe_cidades_download:  ^0.0.3
+  nfe_cidades_download: ^1.0.0
 ```
 
-Execute:
 ```bash
-flutter pub get
+dart pub get  # ou flutter pub get
+```
+
+## Uso Básico (Recomendado)
+
+```dart
+import 'package:nfe_cidades_download/nfe_cidades_download.dart';
+
+void main() async {
+  final baixador = BaixadorNfeCidades(
+    chaveApiAntiCaptcha: 'SUA_CHAVE_API',
+  );
+
+  // Auto-dispose automático! Sem finally necessário!
+  final resultado = await baixador(
+    senha: 'ABCD1234567890',
+    baixarBytes: true,
+  );
+
+  print('URL: ${resultado.urlDownload}');
+  print('ID: ${resultado.idDocumento}');
+  print('Tamanho: ${resultado.tamanho} bytes');
+
+  // Salvar funciona em TODAS as plataformas:
+  // - Web: dispara download no browser
+  // - Nativo: salva no diretório atual (ou caminho customizado)
+  await resultado.salvar!('nota_fiscal.pdf');
+
+  print('PDF salvo com sucesso!');
+}
+```
+
+## Funcionalidades
+
+### 🔄 Auto-Dispose Automático
+
+Os recursos são liberados automaticamente após cada operação. Não é necessário usar `try/finally` com `baixador.liberar()`:
+
+```dart
+final baixador = BaixadorNfeCidades(chaveApiAntiCaptcha: key);
+final resultado = await baixador(senha: senha, baixarBytes: true);
+print(resultado.urlDownload);
+// Recursos liberados automaticamente!
+```
+
+### 🌐 API Unificada Multiplataforma
+
+Uma única API que funciona em todas as plataformas, sem código específico:
+
+```dart
+// Funciona em Web, Mobile e Desktop!
+final resultado = await baixador(
+  senha: 'ABC123',
+  baixarBytes: true,
+);
+
+// Salvamento automático por plataforma
+await resultado.salvar!('nota.pdf');
+// Web: dispara download do browser
+// Nativo: salva no diretório atual
+```
+
+### 📄 Retorno Map/JSON Flexível
+
+O retorno é um `Map<String, dynamic>` com type-safety via extensions:
+
+```dart
+final resultado = await baixador(senha: '...', baixarBytes: true);
+
+// Acesso type-safe com extensions (recomendado)
+String url = resultado.urlDownload;     // String
+String id = resultado.idDocumento;      // String
+int tamanho = resultado.tamanho;        // int
+Uint8List? bytes = resultado.bytes;     // Uint8List?
+String? base64 = resultado.bytesBase64; // String?
+
+// Acesso direto ao Map (também funciona)
+print(resultado['urlDownload']);
+print(resultado['tamanho']);
+
+// Fácil serialização para JSON
+final json = {
+  'urlDownload': resultado.urlDownload,
+  'idDocumento': resultado.idDocumento,
+  'tamanho': resultado.tamanho,
+  'bytesBase64': resultado.bytesBase64,
+};
+```
+
+### 💾 Salvamento de Arquivos Integrado
+
+```dart
+final resultado = await baixador(senha: '...', baixarBytes: true);
+
+// Salvamento padrão
+await resultado.salvar!(null);  // Salva como {idDocumento}.pdf
+
+// Caminho customizado (apenas plataformas nativas)
+await resultado.salvar!('/Downloads/minha_nota.pdf');
+
+// Na web: sempre dispara download do browser (caminho é ignorado)
+// Em mobile/desktop: salva no caminho especificado
+```
+
+### 📦 Uso Avançado (Reutilizável)
+
+Para múltiplos downloads reutilizando conexões:
+
+```dart
+final baixador = BaixadorNfeCidades(chaveApiAntiCaptcha: 'SUA_CHAVE');
+final executor = baixador.criarExecutor();
+
+try {
+  final r1 = await executor.baixarNfe(senha: 'ABC123', baixarBytes: true);
+  final r2 = await executor.baixarNfe(senha: 'DEF456', baixarBytes: true);
+  final r3 = await executor.baixarNfe(senha: 'GHI789', baixarBytes: true);
+
+  await r1['salvar']!('nota1.pdf');
+  await r2['salvar']!('nota2.pdf');
+  await r3['salvar']!('nota3.pdf');
+} finally {
+  executor.liberar(); // Cleanup manual apenas neste caso
+}
+```
+
+## Estrutura do Resultado
+
+```dart
+{
+  'urlDownload': 'https://www.nfe-cidades.com.br/relatorioNotaFiscal.action?id=...',
+  'idDocumento': '123456789',
+  'tamanho': 45678,  // bytes
+  'bytes': Uint8List(...),  // null se baixarBytes=false
+  'bytesBase64': 'JVBERi0xLj...',  // null se baixarBytes=false
+  'salvar': (caminho) async { ... }  // null se baixarBytes=false
+}
+```
+
+## Tratamento de Erros
+
+```dart
+try {
+  final resultado = await baixador(senha: 'ABC123', baixarBytes: true);
+  await resultado.salvar!('nota.pdf');
+} on ExcecaoSenhaInvalida catch (e) {
+  print('Senha inválida: ${e.message}');
+} on ExcecaoDocumentoNaoEncontrado catch (e) {
+  print('Documento não encontrado: ${e.message}');
+} on ExcecaoTempoEsgotadoCaptcha catch (e) {
+  print('Timeout ao resolver captcha: ${e.message}');
+} on ExcecaoAntiCaptcha catch (e) {
+  print('Erro na API Anti-Captcha: ${e.message}');
+} on ExcecaoRede catch (e) {
+  print('Erro de rede: ${e.message}');
+} on ExcecaoNfe catch (e) {
+  print('Erro genérico: ${e.message}');
+}
+```
+
+## Timeout Customizado
+
+```dart
+final resultado = await baixador(
+  senha: 'ABC123',
+  baixarBytes: true,
+  tempoLimite: Duration(minutes: 5), // Padrão: 3 minutos
+);
 ```
 
 ## Compatibilidade de Plataformas
 
-Este pacote é **totalmente multiplataforma** e funciona em:
+| Plataforma | Suportado | Salvamento de Arquivos |
+|-----------|-----------|------------------------|
+| Web | ✅ | Download via browser |
+| Android | ✅ | Salva no sistema de arquivos |
+| iOS | ✅ | Salva no sistema de arquivos |
+| Windows | ✅ | Salva no sistema de arquivos |
+| macOS | ✅ | Salva no sistema de arquivos |
+| Linux | ✅ | Salva no sistema de arquivos |
 
-- ✅ **Web** (Flutter Web) - **Principal uso do pacote**
-- ✅ **Android**
-- ✅ **iOS**
-- ✅ **Windows**
-- ✅ **macOS**
-- ✅ **Linux**
-
-O pacote utiliza apenas bibliotecas multiplataforma (`dio`, `cookie_jar`, `dio_cookie_manager`) e não possui dependências específicas de plataforma. 
-
-### Compatibilidade Web
-
-O pacote foi **otimizado para funcionar perfeitamente na web**:
-
-- ✅ Gerenciamento automático de cookies através do navegador (sem necessidade de CookieJar)
-- ✅ Suporte completo para download de PDFs no navegador
-- ✅ Compatível com CORS e políticas de segurança do navegador
-- ✅ Funciona em todos os navegadores modernos (Chrome, Firefox, Safari, Edge)
-
-**Nota sobre Web**: Na web, o salvamento de arquivos requer tratamento especial usando `package:web`. Veja o Exemplo 2 abaixo para código multiplataforma e o [exemplo_web.dart](example/exemplo_web.dart) para um exemplo específico de web.
-
-## Uso Básico
-
-### Exemplo 1: Obter apenas a URL de download
-
-```dart
-import 'package:nfe_cidades_download/nfe_cidades_download.dart';
-
-void main() async {
-  final downloader = NfeCidadesDownloader(
-    antiCaptchaApiKey: 'SUA_CHAVE_API',
-  );
-
-  try {
-    final result = await downloader.downloadNfe(
-      senha: 'ABCD1234567890',
-    );
-
-    print('URL: ${result.downloadUrl}');
-    print('Document ID: ${result.documentId}');
-  } finally {
-    downloader.dispose();
-  }
-}
-```
-
-### Exemplo 2: Baixar o PDF completo (Multiplataforma)
-
-```dart
-import 'dart:io' show File;
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:nfe_cidades_download/nfe_cidades_download.dart';
-
-void main() async {
-  final downloader = NfeCidadesDownloader(
-    antiCaptchaApiKey: 'SUA_CHAVE_API',
-  );
-
-  try {
-    final result = await downloader.downloadNfe(
-      senha: 'ABCD1234567890',
-      downloadBytes: true,
-      timeout: Duration(minutes: 10),
-    );
-
-    if (result.pdfBytes != null) {
-      if (kIsWeb) {
-        // Na web, use a URL para download ou processe os bytes no navegador
-        print('PDF baixado! Tamanho: ${result.pdfBytes!.length} bytes');
-        print('URL de download: ${result.downloadUrl}');
-        // Você pode usar package:web para fazer download
-        // Veja exemplo_web.dart para implementação completa
-      } else {
-        // Em plataformas nativas, salvar em arquivo
-        final file = File('nota_fiscal.pdf');
-        await file.writeAsBytes(result.pdfBytes!);
-        print('PDF salvo: ${file.path}');
-      }
-    }
-  } finally {
-    downloader.dispose();
-  }
-}
-```
-
-### Exemplo 3: Uso específico para Web (Flutter Web)
-
-Para aplicações web, veja o exemplo completo em [example/exemplo_web.dart](example/exemplo_web.dart) que demonstra como fazer download de arquivos usando `package:web` (substituição moderna de `dart:html`).
-
-### Exemplo 4: Tratamento completo de erros
-
-```dart
-import 'package:nfe_cidades_download/nfe_cidades_download.dart';
-
-void main() async {
-  final downloader = NfeCidadesDownloader(
-    antiCaptchaApiKey: 'SUA_CHAVE_API',
-  );
-
-  try {
-    final result = await downloader.downloadNfe(
-      senha: 'ABCD1234567890',
-    );
-    print('Sucesso: ${result.downloadUrl}');
-  } on InvalidSenhaException catch (e) {
-    print('Senha inválida: $e');
-  } on DocumentNotFoundException catch (e) {
-    print('Documento não encontrado: $e');
-  } on CaptchaTimeoutException catch (e) {
-    print('Timeout ao resolver captcha: $e');
-  } on AntiCaptchaException catch (e) {
-    print('Erro no Anti-Captcha: $e');
-  } on NetworkException catch (e) {
-    print('Erro de rede: $e');
-  } on TimeoutException catch (e) {
-    print('Timeout geral: $e');
-  } on NfeException catch (e) {
-    print('Erro: $e');
-  } finally {
-    downloader.dispose();
-  }
-}
-```
+**Nota**: O pacote funciona em **Dart puro** (sem Flutter) e em projetos Flutter.
 
 ## API
 
-### Classe Principal: `NfeCidadesDownloader`
+### Classe Callable
 
-#### Construtor
+A classe `BaixadorNfeCidades` é callable, permitindo uso direto:
+
 ```dart
-NfeCidadesDownloader({
-  required String antiCaptchaApiKey,
-  Dio? dio,
-})
+final resultado = await baixador(senha: 'ABC123', baixarBytes: true);
 ```
 
-#### Método: `downloadNfe`
+### Retorno Map com Extensions
+
+O resultado é um `Map<String, dynamic>` com extensions para type-safety:
+
 ```dart
-Future<NfeDownloadResult> downloadNfe({
-  required String senha,
-  bool downloadBytes = false,
-  Duration? timeout,
-})
+// Acesso type-safe (recomendado)
+String url = resultado.urlDownload;
+int tamanho = resultado.tamanho;
+
+// Acesso direto ao Map
+print(resultado['urlDownload']);
 ```
 
-**Parâmetros:**
-- `senha`: Senha formatada da NFe (ex: `ABCD1234567890`)
-- `downloadBytes`: Se `true`, baixa os bytes do PDF (padrão: `false`)
-- `timeout`: Timeout máximo para toda a operação (padrão: 5 minutos)
+## Exemplos Completos
 
-**Retorna:** `NfeDownloadResult` contendo:
-- `downloadUrl`: URL para download direto
-- `documentId`: ID do documento
-- `pdfBytes`: Bytes do PDF (se `downloadBytes` foi `true`)
+Veja a pasta [example/](example/) para exemplos completos de uso.
 
-#### Método: `dispose`
-```dart
-void dispose()
-```
-Libera recursos. Sempre chame este método quando terminar de usar o downloader.
+## Limitações
 
-## Exceções
+1. **Créditos Anti-Captcha**: Requer créditos pagos no serviço Anti-Captcha
+2. **Tempo de Processamento**: Resolução de captcha pode levar 10-30 segundos
+3. **Web - Salvamento**: Na web, o arquivo sempre vai para a pasta de Downloads do browser (limitação do navegador)
 
-| Exceção | Descrição |
-|---------|-----------|
-| `InvalidSenhaException` | Senha inválida ou captcha rejeitado |
-| `DocumentNotFoundException` | Documento não encontrado |
-| `CaptchaTimeoutException` | Timeout ao resolver captcha (padrão: 3 minutos) |
-| `AntiCaptchaException` | Erro na API Anti-Captcha (verifique créditos/chave) |
-| `NetworkException` | Erro de rede/conexão |
-| `TimeoutException` | Timeout geral da operação |
-| `NfeApiException` | Erro genérico da API NFe-Cidades |
+## Suporte
 
-## Fluxo de Funcionamento
-
-1. **Resolve reCAPTCHA** usando Anti-Captcha (10-60 segundos)
-2. **Busca documento** via API NFe-Cidades com token do captcha
-3. **Extrai ID** do documento da resposta HTML
-4. **Gera URL** de download direto
-5. **Baixa PDF** (opcional) se `downloadBytes: true`
-
-## Configurações Padrão
-
-- **Timeout total**: 5 minutos
-- **Timeout captcha**: 3 minutos
-- **Polling captcha**: A cada 2 segundos
-- **reCAPTCHA Site Key**: `6Lf9374hAAAAAMorFLzMzomJWlbu0FK92Q25culn`
-
-## Limitações e Considerações
-
-- ⚠️ Requer créditos no Anti-Captcha (~$1 por 1000 captchas)
-- ⚠️ O tempo de download varia de acordo com a fila do Anti-Captcha
-- ⚠️ A senha deve estar no formato correto da NFe-Cidades
-- ⚠️ Respeite os termos de uso do portal NFe-Cidades
-- ⚠️ Na web, o salvamento de arquivos requer tratamento especial (use `kIsWeb` para detectar a plataforma)
-
-## Troubleshooting
-
-### Erro: "Invalid senha or captcha token"
-- Verifique se a senha está correta
-- Tente novamente (o captcha pode ter expirado)
-
-### Erro: "Captcha solving timed out"
-- O Anti-Captcha está sobrecarregado, tente novamente
-- Aumente o timeout: `timeout: Duration(minutes: 10)`
-
-### Erro: "Failed to create captcha task"
-- Verifique se sua chave da API está correta
-- Verifique se você tem créditos suficientes
-
-### Erro: "Could not extract document ID"
-- O formato do HTML pode ter mudado
-- Abra uma issue no GitHub
-
-## Exemplo Completo
-
-Veja o arquivo [example/exemplo.dart](example/exemplo.dart) para um exemplo completo com todos os recursos.
+- 📫 Issues: [GitHub Issues](https://github.com/MarlonSantosDev/nfe_cidades_download/issues)
+- 📖 Documentação: [API Docs](https://pub.dev/documentation/nfe_cidades_download/latest/)
 
 ## Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+MIT License - veja [LICENSE](LICENSE) para detalhes.
 
-## Aviso Legal
+## Créditos
 
-Este pacote é fornecido "como está", sem garantias. Use por sua conta e risco. Certifique-se de estar em conformidade com os termos de uso do portal NFe-Cidades e do serviço Anti-Captcha.
+Este pacote utiliza:
+- [dio](https://pub.dev/packages/dio) - Cliente HTTP
+- [Anti-Captcha](https://anti-captcha.com) - Serviço de resolução de captchas
+- [web](https://pub.dev/packages/web) - Interoperabilidade com APIs web
+
+---
+
+**Nota**: Este pacote não é afiliado ao portal nfe-cidades.com.br ou ao serviço Anti-Captcha.

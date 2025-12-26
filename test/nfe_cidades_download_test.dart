@@ -1,115 +1,108 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:nfe_cidades_download/nfe_cidades_download.dart';
 import 'dart:typed_data';
 
 void main() {
-  group('BaixadorNfeCidades', () {
-    test('should create instance with API key', () {
-      final baixador = BaixadorNfeCidades(chaveApiAntiCaptcha: 'test_key');
-
+  group('BaixadorNfeCidades - API v1.0.0', () {
+    test('deve criar instância com chave API', () {
+      const baixador = BaixadorNfeCidades(chaveApiAntiCaptcha: 'test_key');
       expect(baixador.chaveApiAntiCaptcha, 'test_key');
-      baixador.liberar();
     });
 
-    test('should create instance with custom Dio', () {
-      final baixador = BaixadorNfeCidades(
-        chaveApiAntiCaptcha: 'test_key',
-      );
-
-      expect(baixador, isNotNull);
-      expect(baixador.chaveApiAntiCaptcha, 'test_key');
-      baixador.liberar();
+    test('deve ser callable', () {
+      const baixador = BaixadorNfeCidades(chaveApiAntiCaptcha: 'test_key');
+      expect(baixador.call, isA<Function>());
     });
 
-    test('should dispose resources without errors', () {
-      final baixador = BaixadorNfeCidades(chaveApiAntiCaptcha: 'test_key');
-      expect(() => baixador.liberar(), returnsNormally);
+    test('deve criar executor reutilizável', () {
+      const baixador = BaixadorNfeCidades(chaveApiAntiCaptcha: 'test_key');
+      final executor = baixador.criarExecutor();
+      expect(executor, isNotNull);
+      executor.liberar();
     });
   });
 
-  group('ResultadoDownloadNfe', () {
-    test('should create result with required fields', () {
-      const resultado = ResultadoDownloadNfe(
-        urlDownload: 'https://example.com/download?id=123',
-        idDocumento: '123',
-      );
+  group('Map Result com Extensions - API v1.0.0', () {
+    test('deve criar resultado Map válido', () {
+      final resultado = <String, dynamic>{
+        'urlDownload': 'https://example.com/download?id=123',
+        'idDocumento': '123',
+        'tamanho': 12345,
+        'bytes': Uint8List(100),
+        'bytesBase64': 'base64string',
+      };
 
-      expect(resultado.urlDownload, 'https://example.com/download?id=123');
-      expect(resultado.idDocumento, '123');
-      expect(resultado.bytesPdf, isNull);
+      expect(resultado['urlDownload'], 'https://example.com/download?id=123');
+      expect(resultado['idDocumento'], '123');
+      expect(resultado['tamanho'], 12345);
     });
 
-    test('should create result with PDF bytes', () {
+    test('deve fornecer acesso type-safe via extensions', () {
       final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
-      final resultado = ResultadoDownloadNfe(
-        urlDownload: 'https://example.com/download?id=123',
-        idDocumento: '123',
-        bytesPdf: bytes,
-      );
+      final resultado = <String, dynamic>{
+        'urlDownload': 'https://example.com/download?id=123',
+        'idDocumento': '123',
+        'tamanho': 5,
+        'bytes': bytes,
+        'bytesBase64': 'AQIDBAU=',
+      };
 
+      // Testa extensions type-safe
       expect(resultado.urlDownload, 'https://example.com/download?id=123');
       expect(resultado.idDocumento, '123');
-      expect(resultado.bytesPdf, isNotNull);
-      expect(resultado.bytesPdf!.length, 5);
-      expect(resultado.bytesPdf, equals(bytes));
+      expect(resultado.tamanho, 5);
+      expect(resultado.bytes, isNotNull);
+      expect(resultado.bytes!.length, 5);
+      expect(resultado.bytes, equals(bytes));
+      expect(resultado.bytesBase64, 'AQIDBAU=');
     });
 
-    test('should have correct toString representation', () {
-      const resultado = ResultadoDownloadNfe(
-        urlDownload: 'https://example.com/download?id=123',
-        idDocumento: '123',
-      );
+    test('deve suportar campos opcionais nulos', () {
+      final resultado = <String, dynamic>{
+        'urlDownload': 'https://example.com',
+        'idDocumento': '123',
+        'tamanho': 0,
+        'bytes': null,
+        'bytesBase64': null,
+        'salvar': null,
+      };
 
-      final str = resultado.toString();
-      expect(str, contains('ResultadoDownloadNfe'));
-      expect(str, contains('urlDownload'));
-      expect(str, contains('idDocumento'));
-      expect(str, contains('temBytesPdf'));
-    });
-
-    test('should have correct toString with PDF bytes', () {
-      final bytes = Uint8List.fromList([1, 2, 3]);
-      final resultado = ResultadoDownloadNfe(
-        urlDownload: 'https://example.com/download?id=123',
-        idDocumento: '123',
-        bytesPdf: bytes,
-      );
-
-      final str = resultado.toString();
-      expect(str, contains('temBytesPdf: true'));
+      expect(resultado.bytes, isNull);
+      expect(resultado.bytesBase64, isNull);
+      expect(resultado.salvar, isNull);
     });
   });
 
-  group('Exceptions', () {
-    test('should throw ExcecaoSenhaInvalida', () {
+  group('Exceções', () {
+    test('deve lançar ExcecaoSenhaInvalida', () {
       expect(
         () => throw const ExcecaoSenhaInvalida('Senha inválida'),
         throwsA(isA<ExcecaoSenhaInvalida>()),
       );
     });
 
-    test('should throw ExcecaoDocumentoNaoEncontrado', () {
+    test('deve lançar ExcecaoDocumentoNaoEncontrado', () {
       expect(
         () => throw const ExcecaoDocumentoNaoEncontrado('Não encontrado'),
         throwsA(isA<ExcecaoDocumentoNaoEncontrado>()),
       );
     });
 
-    test('should throw ExcecaoTempoEsgotadoCaptcha', () {
+    test('deve lançar ExcecaoTempoEsgotadoCaptcha', () {
       expect(
         () => throw const ExcecaoTempoEsgotadoCaptcha('Timeout'),
         throwsA(isA<ExcecaoTempoEsgotadoCaptcha>()),
       );
     });
 
-    test('should throw ExcecaoAntiCaptcha', () {
+    test('deve lançar ExcecaoAntiCaptcha', () {
       expect(
         () => throw const ExcecaoAntiCaptcha('Erro'),
         throwsA(isA<ExcecaoAntiCaptcha>()),
       );
     });
 
-    test('should throw ExcecaoAntiCaptcha with error code', () {
+    test('deve lançar ExcecaoAntiCaptcha com código de erro', () {
       const excecao = ExcecaoAntiCaptcha(
         'Erro',
         codigoErro: 'ERROR_ZERO_BALANCE',
@@ -118,28 +111,28 @@ void main() {
       expect(excecao.toString(), contains('ERROR_ZERO_BALANCE'));
     });
 
-    test('should throw ExcecaoRede', () {
+    test('deve lançar ExcecaoRede', () {
       expect(
         () => throw const ExcecaoRede('Erro de rede'),
         throwsA(isA<ExcecaoRede>()),
       );
     });
 
-    test('should throw ExcecaoTempoEsgotado', () {
+    test('deve lançar ExcecaoTempoEsgotado', () {
       expect(
         () => throw const ExcecaoTempoEsgotado('Timeout'),
         throwsA(isA<ExcecaoTempoEsgotado>()),
       );
     });
 
-    test('should throw ExcecaoApiNfe', () {
+    test('deve lançar ExcecaoApiNfe', () {
       expect(
         () => throw const ExcecaoApiNfe('Erro na API'),
         throwsA(isA<ExcecaoApiNfe>()),
       );
     });
 
-    test('should throw ExcecaoApiNfe with status code', () {
+    test('deve lançar ExcecaoApiNfe com código de status', () {
       const excecao = ExcecaoApiNfe(
         'Erro na API',
         codigoStatus: 500,
@@ -148,7 +141,7 @@ void main() {
       expect(excecao.toString(), contains('HTTP 500'));
     });
 
-    test('should throw ExcecaoSenhaInvalida with status code', () {
+    test('deve lançar ExcecaoSenhaInvalida com código de status', () {
       const excecao = ExcecaoSenhaInvalida(
         'Senha inválida',
         codigoStatus: 401,
@@ -157,7 +150,7 @@ void main() {
       expect(excecao.toString(), contains('ExcecaoSenhaInvalida'));
     });
 
-    test('should throw ExcecaoDocumentoNaoEncontrado with status code', () {
+    test('deve lançar ExcecaoDocumentoNaoEncontrado com código de status', () {
       const excecao = ExcecaoDocumentoNaoEncontrado(
         'Não encontrado',
         codigoStatus: 404,
@@ -166,7 +159,7 @@ void main() {
       expect(excecao.toString(), contains('ExcecaoDocumentoNaoEncontrado'));
     });
 
-    test('should preserve original error in exception', () {
+    test('deve preservar erro original na exceção', () {
       final erroOriginal = Exception('Erro original');
       final excecao = ExcecaoRede(
         'Erro wrapper',
@@ -174,11 +167,10 @@ void main() {
       );
       expect(excecao.erroOriginal, erroOriginal);
       expect(excecao.mensagem, 'Erro wrapper');
-      // O erroOriginal é armazenado mas pode não aparecer em toString()
       expect(excecao.erroOriginal, isNotNull);
     });
 
-    test('should preserve stack trace in exception', () {
+    test('deve preservar stack trace na exceção', () {
       final rastreamentoPilha = StackTrace.current;
       final excecao = ExcecaoRede(
         'Erro',

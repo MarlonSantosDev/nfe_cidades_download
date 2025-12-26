@@ -1,6 +1,6 @@
 name: nfe_cidades_download
-description: "Download NFe de nfe-cidades.com.br usando Anti-Captcha"
-version: 0.0.2
+description: Pacote Dart/Flutter para download automático de NFe do portal nfe-cidades.com.br com resolução de CAPTCHA e suporte multiplataforma completo.
+version: 1.0.0
 homepage: https://github.com/MarlonSantosDev/nfe_cidades_download
 repository: https://github.com/MarlonSantosDev/nfe_cidades_download
 issue_tracker: https://github.com/MarlonSantosDev/nfe_cidades_download/issues
@@ -8,25 +8,32 @@ documentation: https://github.com/MarlonSantosDev/nfe_cidades_download#readme
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
-  flutter: ">=3.0.0"
+
+# Declaração explícita de suporte multiplataforma
+platforms:
+  android:
+  ios:
+  linux:
+  macos:
+  web:
+  windows:
+
+# Tópicos para facilitar descoberta no pub.dev
+topics:
+  - nfe
+  - nota-fiscal
+  - download
+  - captcha
+  - pdf
 
 dependencies:
-  flutter:
-    sdk: flutter
-    
   dio: ^5.9.0
   cookie_jar: ^4.0.8
   dio_cookie_manager: ^3.3.0
   web: ^1.1.1
 
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^6.0.0
+  test: ^1.28.0
+  lints: ^6.0.0
   mockito: ^5.6.1
   build_runner: ^2.10.4
-
-false_secrets:
-  - lib/src/constants.dart
-
-flutter:

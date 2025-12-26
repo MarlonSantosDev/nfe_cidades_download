@@ -4,11 +4,21 @@
 /// do site nfe-cidades.com.br, utilizando o serviço Anti-Captcha para resolver
 /// os captchas necessários durante o processo de autenticação.
 ///
+/// ## ✨ Versão 1.0.0
+///
+/// - 🔄 **Auto-dispose automático** - Sem necessidade de `finally { baixador.liberar(); }`
+/// - 🌐 **API unificada** - Mesma API funciona em Web, Mobile e Desktop
+/// - 📦 **Dart puro** - Funciona sem dependência do Flutter
+/// - 📄 **Retorno Map/JSON** - Mais flexível e fácil de trabalhar
+/// - 💾 **Salvamento integrado** - Salva PDFs em todas as plataformas
+/// - 🚀 **API limpa** - Sem código deprecated, apenas o essencial
+///
 /// ## Características
 ///
 /// - ✅ Resolve reCAPTCHA v2 automaticamente usando Anti-Captcha
 /// - ✅ Retorna URL de download direto da NFe
 /// - ✅ Opção para baixar os bytes do PDF automaticamente
+/// - ✅ Salvamento de arquivos multiplataforma (web, mobile, desktop)
 /// - ✅ Timeout configurável
 /// - ✅ Gerenciamento automático de cookies de sessão
 /// - ✅ Exceções específicas para diferentes tipos de erro
@@ -25,16 +35,18 @@
 ///     chaveApiAntiCaptcha: 'SUA_CHAVE_API',
 ///   );
 ///
-///   try {
-///     final resultado = await baixador.baixarNfe(
-///       senha: 'ABCD1234567890',
-///     );
+///   // Auto-dispose automático! Sem finally necessário!
+///   final resultado = await baixador(
+///     senha: 'ABCD1234567890',
+///     baixarBytes: true,
+///   );
 ///
-///     print('URL: ${resultado.urlDownload}');
-///     print('ID do Documento: ${resultado.idDocumento}');
-///   } finally {
-///     baixador.liberar();
-///   }
+///   print('URL: ${resultado.urlDownload}');
+///   print('ID: ${resultado.idDocumento}');
+///   print('Tamanho: ${resultado.tamanho} bytes');
+///
+///   // Salvar funciona em todas as plataformas
+///   await resultado.salvar!('nota_fiscal.pdf');
 /// }
 /// ```
 ///
@@ -49,5 +61,7 @@
 library;
 
 export 'src/nfe_cidades_downloader.dart';
-export 'src/models/nfe_download_result.dart';
+export 'src/nfe_result_extension.dart';
+export 'src/nfe_file_saver.dart';
+export 'src/platform_detector.dart';
 export 'src/exceptions/nfe_exceptions.dart';

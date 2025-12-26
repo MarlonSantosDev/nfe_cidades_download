@@ -1,125 +1,108 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:nfe_cidades_download/nfe_cidades_download.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:dio/dio.dart';
 import 'dart:typed_data';
 
 /// Testes de validação multiplataforma
 ///
 /// Estes testes verificam se o pacote funciona corretamente em diferentes plataformas,
-/// com foco especial na compatibilidade com web.
+/// com foco especial na compatibilidade Dart puro e API v0.1.0.
 void main() {
-  group('Validação Multiplataforma', () {
-    test('deve criar instância do baixador em qualquer plataforma', () {
-      final baixador = BaixadorNfeCidades(
+  group('BaixadorNfeCidades - API v0.1.0', () {
+    test('deve criar instância do baixador', () {
+      const baixador = BaixadorNfeCidades(
         chaveApiAntiCaptcha: 'test_key_12345',
       );
 
       expect(baixador.chaveApiAntiCaptcha, 'test_key_12345');
-      expect(() => baixador.liberar(), returnsNormally);
     });
 
-    test('deve funcionar com Dio customizado', () {
-      final dio = Dio();
-      final baixador = BaixadorNfeCidades(
+    test('deve ser callable', () {
+      const baixador = BaixadorNfeCidades(
         chaveApiAntiCaptcha: 'test_key',
-        dio: dio,
       );
 
-      expect(baixador, isNotNull);
-      baixador.liberar();
+      // Verifica que é callable (tem método call)
+      expect(baixador, isA<BaixadorNfeCidades>());
+      expect(baixador.chaveApiAntiCaptcha, 'test_key');
     });
 
-    test('deve criar ResultadoDownloadNfe válido', () {
-      const resultado = ResultadoDownloadNfe(
-        urlDownload: 'https://example.com/download?id=123',
-        idDocumento: '123',
+    test('deve criar executor reutilizável', () {
+      const baixador = BaixadorNfeCidades(
+        chaveApiAntiCaptcha: 'test_key',
       );
 
+      final executor = baixador.criarExecutor();
+      expect(executor, isNotNull);
+      // Cleanup do executor
+      executor.liberar();
+    });
+  });
+
+  group('NfeResultExtension', () {
+    test('deve fornecer acesso type-safe ao Map', () {
+      final resultado = <String, dynamic>{
+        'urlDownload': 'https://example.com/download?id=123',
+        'idDocumento': '123',
+        'tamanho': 12345,
+        'bytes': Uint8List(100),
+        'bytesBase64': 'base64string',
+        'salvar': null,
+      };
+
+      // Testa extensions
       expect(resultado.urlDownload, contains('123'));
       expect(resultado.idDocumento, '123');
-      expect(resultado.bytesPdf, isNull);
+      expect(resultado.tamanho, 12345);
+      expect(resultado.bytes, isNotNull);
+      expect(resultado.bytes!.length, 100);
+      expect(resultado.bytesBase64, 'base64string');
     });
 
-    test('deve criar ResultadoDownloadNfe com PDF bytes', () {
-      final bytes = Uint8List.fromList([1, 2, 3, 4, 5]);
-      final resultado = ResultadoDownloadNfe(
-        urlDownload: 'https://example.com/download?id=123',
-        idDocumento: '123',
-        bytesPdf: bytes,
+    test('deve retornar null para campos opcionais', () {
+      final resultado = <String, dynamic>{
+        'urlDownload': 'https://example.com',
+        'idDocumento': '123',
+        'tamanho': 0,
+        'bytes': null,
+        'bytesBase64': null,
+        'salvar': null,
+      };
+
+      expect(resultado.bytes, isNull);
+      expect(resultado.bytesBase64, isNull);
+      expect(resultado.salvar, isNull);
+    });
+  });
+
+  group('Exceções', () {
+    test('ExcecaoSenhaInvalida deve ser criada', () {
+      expect(
+        () => throw const ExcecaoSenhaInvalida('Senha inválida'),
+        throwsA(isA<ExcecaoSenhaInvalida>()),
       );
-
-      expect(resultado.bytesPdf, isNotNull);
-      expect(resultado.bytesPdf!.length, 5);
     });
 
-    test('deve detectar plataforma corretamente', () {
-      // Este teste verifica se kIsWeb está disponível
-      // Na web, kIsWeb será true, em outras plataformas será false
-      expect(kIsWeb, isA<bool>());
+    test('ExcecaoDocumentoNaoEncontrado deve ser criada', () {
+      expect(
+        () => throw const ExcecaoDocumentoNaoEncontrado('Não encontrado'),
+        throwsA(isA<ExcecaoDocumentoNaoEncontrado>()),
+      );
     });
 
-    group('Compatibilidade Web', () {
-      test('deve funcionar sem CookieJar na web', () {
-        // Na web, o Dio gerencia cookies automaticamente
-        // Este teste verifica que não há erro ao criar o cliente sem CookieJar
-        final baixador = BaixadorNfeCidades(chaveApiAntiCaptcha: 'test_key');
-
-        expect(baixador, isNotNull);
-        expect(() => baixador.liberar(), returnsNormally);
-      });
+    test('ExcecaoTempoEsgotado deve ser criada', () {
+      expect(
+        () => throw const ExcecaoTempoEsgotado('Timeout'),
+        throwsA(isA<ExcecaoTempoEsgotado>()),
+      );
     });
+  });
 
-    group('Exceções Multiplataforma', () {
-      test('deve lançar ExcecaoSenhaInvalida', () {
-        expect(
-          () => throw const ExcecaoSenhaInvalida('Senha inválida'),
-          throwsA(isA<ExcecaoSenhaInvalida>()),
-        );
-      });
-
-      test('deve lançar ExcecaoDocumentoNaoEncontrado', () {
-        expect(
-          () => throw const ExcecaoDocumentoNaoEncontrado(
-              'Documento não encontrado'),
-          throwsA(isA<ExcecaoDocumentoNaoEncontrado>()),
-        );
-      });
-
-      test('deve lançar ExcecaoTempoEsgotadoCaptcha', () {
-        expect(
-          () => throw const ExcecaoTempoEsgotadoCaptcha('Timeout'),
-          throwsA(isA<ExcecaoTempoEsgotadoCaptcha>()),
-        );
-      });
-
-      test('deve lançar ExcecaoAntiCaptcha', () {
-        expect(
-          () => throw const ExcecaoAntiCaptcha('Erro no Anti-Captcha'),
-          throwsA(isA<ExcecaoAntiCaptcha>()),
-        );
-      });
-
-      test('deve lançar ExcecaoRede', () {
-        expect(
-          () => throw const ExcecaoRede('Erro de rede'),
-          throwsA(isA<ExcecaoRede>()),
-        );
-      });
-
-      test('deve lançar ExcecaoTempoEsgotado', () {
-        expect(
-          () => throw const ExcecaoTempoEsgotado('Timeout geral'),
-          throwsA(isA<ExcecaoTempoEsgotado>()),
-        );
-      });
-
-      test('deve lançar ExcecaoApiNfe', () {
-        expect(
-          () => throw const ExcecaoApiNfe('Erro na API'),
-          throwsA(isA<ExcecaoApiNfe>()),
-        );
-      });
+  group('PlatformDetector', () {
+    test('deve detectar plataforma', () {
+      // PlatformDetector.isWeb retorna true na web, false em outras plataformas
+      expect(PlatformDetector.isWeb, isA<bool>());
+      expect(PlatformDetector.isNative, isA<bool>());
+      expect(PlatformDetector.isWeb, equals(!PlatformDetector.isNative));
     });
   });
 }
