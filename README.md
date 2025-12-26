@@ -6,14 +6,15 @@
 
 - 🔄 **Auto-dispose automático** - Recursos liberados automaticamente
 - 🌐 **API unificada** - Mesma API funciona em Web, Mobile e Desktop
-- 📦 **Dart puro** - Funciona sem dependência do Flutter SDK
+- 📦 **Flutter** - Requer Flutter SDK (devido ao sistema de cache)
 - 📄 **Retorno Map/JSON** - Flexível e fácil de trabalhar
 - 💾 **Salvamento integrado** - Salva PDFs em todas as plataformas
+- ⚡ **Cache inteligente** - Armazena NFes localmente para acesso instantâneo
 
 ## Características
 
 - ✅ Funciona em **todas as plataformas**: Web, Mobile (Android/iOS), Desktop (Windows/macOS/Linux)
-- ✅ **Dart puro** - não requer Flutter (mas funciona perfeitamente com Flutter também)
+- ✅ **Flutter SDK** - requer Flutter (shared_preferences para cache)
 - ✅ **Auto-dispose** - recursos liberados automaticamente, sem `finally` necessário
 - ✅ Resolve reCAPTCHA v2 automaticamente usando Anti-Captcha
 - ✅ Retorna URL de download + bytes do PDF
@@ -33,7 +34,7 @@
 
 ```yaml
 dependencies:
-  nfe_cidades_download: ^1.0.0
+  nfe_cidades_download: ^1.1.0
 ```
 
 ```bash
@@ -205,6 +206,55 @@ final resultado = await baixador(
   tempoLimite: Duration(minutes: 5), // Padrão: 3 minutos
 );
 ```
+
+## ⚡ Sistema de Cache
+
+O pacote inclui um sistema de cache inteligente que armazena NFes localmente, reduzindo drasticamente o tempo de resposta de ~30 segundos para menos de 100ms em acessos repetidos.
+
+### Características do Cache
+
+- **Transparente**: Zero mudanças no código existente
+- **Ativado por padrão**: Começa a funcionar imediatamente
+- **Multiplataforma**: Funciona em todas as plataformas (usa shared_preferences)
+- **Tolerante a falhas**: Erros no cache não afetam o download
+
+### Como Funciona
+
+```dart
+final baixador = BaixadorNfeCidades(chaveApiAntiCaptcha: 'SUA_CHAVE');
+
+// 1ª chamada: busca da fonte (~30s) + salva no cache
+final resultado1 = await baixador(senha: 'ABC123', baixarBytes: true);
+
+// 2ª chamada com mesma senha: retorna do cache (<100ms)
+final resultado2 = await baixador(senha: 'ABC123', baixarBytes: true);
+
+// Funcionalidade idêntica - função salvar reconstrói corretamente
+await resultado2.salvar!(); // Funciona perfeitamente!
+```
+
+### Controlar o Cache
+
+```dart
+// Desabilitar cache (sempre busca da fonte)
+BaixadorNfeCidades.usarCache = false;
+
+// Habilitar cache (padrão)
+BaixadorNfeCidades.usarCache = true;
+
+// Limpar todo o cache armazenado
+await BaixadorNfeCidades.limparCache();
+
+// Limpar cache de uma senha específica
+await BaixadorNfeCidades.limparCachePorSenha('17PI.QZNQ.HYQU.CYMM');
+```
+
+### Benefícios
+
+- ⚡ **Performance**: 30s+ → <100ms (cache hit)
+- 💰 **Economia**: Reduz gastos com créditos Anti-Captcha
+- 📦 **Espaço**: NFe média ~50-200KB, capacidade para 5-20 documentos
+- 🔒 **Seguro**: Apenas limpeza manual, sem expiração automática
 
 ## Compatibilidade de Plataformas
 

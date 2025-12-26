@@ -9,7 +9,15 @@
       "Bash(dart test:*)",
       "Bash(dart pub publish:*)",
       "Bash(git rm:*)",
-      "Bash(dart doc:*)"
+      "Bash(dart doc:*)",
+      "Bash(dart example.dart:*)",
+      "Bash(ls:*)",
+      "Bash(dart test_salvar.dart:*)",
+      "Bash(dart test_cache.dart:*)",
+      "Bash(dart compile:*)",
+      "Bash(dart test_validacao_completa.dart:*)",
+      "Bash(find:*)",
+      "Bash(dart pub deps:*)"
     ]
   }
 }

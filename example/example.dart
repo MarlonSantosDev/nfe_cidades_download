@@ -2,14 +2,17 @@ import 'package:nfe_cidades_download/nfe_cidades_download.dart';
 
 /// Exemplo de uso do pacote nfe_cidades_download
 ///
-/// Este exemplo demonstra a API v1.0.0 unificada que funciona em todas
-/// as plataformas (Web, Mobile, Desktop) com auto-dispose automático
-/// e salvamento multiplataforma.
+/// Este exemplo demonstra a API v1.1.0 unificada que funciona em todas
+/// as plataformas (Web, Mobile, Desktop) com auto-dispose automático,
+/// salvamento multiplataforma e sistema de cache inteligente.
+///
+const chaveApiAntiCaptcha = '7112f738d4e027fef1f55db83dc469c5';
+const senhaNfe = '17PI.QZNQ.HYQU.CYMM';
 void main() async {
   // Criar instância do baixador
   // Obtenha sua chave em: https://anti-captcha.com
   const baixador = BaixadorNfeCidades(
-    chaveApiAntiCaptcha: 'SUA_CHAVE_API_ANTI_CAPTCHA',
+    chaveApiAntiCaptcha: chaveApiAntiCaptcha,
   );
 
   print('🚀 Iniciando download de NFe...\n');
@@ -18,7 +21,7 @@ void main() async {
     // Download com auto-dispose automático!
     // Não é mais necessário usar try/finally com baixador.liberar()
     final resultado = await baixador(
-      senha: 'ABCD1234567890', // Substitua pela senha da sua NFe
+      senha: senhaNfe, // Substitua pela senha da sua NFe
       baixarBytes: true, // true para baixar o PDF completo
     );
 
@@ -31,20 +34,19 @@ void main() async {
 
     // Salvamento multiplataforma - funciona em todas as plataformas!
     // - Web: dispara download no browser
-    // - Mobile/Desktop: salva no diretório atual ou caminho customizado
+    // - Mobile/Desktop: salva no diretório atual
     print('💾 Salvando PDF...');
-    await resultado.salvar!('nota_fiscal.pdf');
-    print('✅ PDF salvo com sucesso: nota_fiscal.pdf\n');
 
-    // Também pode acessar diretamente como Map
-    print('📊 Acesso alternativo via Map:');
-    print('   ${resultado['idDocumento']}');
-    print('   ${resultado['tamanho']} bytes');
+    // Opção 1: Sem parâmetro - usa o ID do documento como nome (recomendado)
+    await resultado.salvar!();
+    print('✅ PDF salvo: ${resultado.idDocumento}.pdf');
 
-    // Para JSON serialization, use bytesBase64
-    if (resultado.bytesBase64 != null) {
-      print('\n📦 Bytes disponíveis em base64 para serialização JSON');
-    }
+    // Opção 2: Com nome customizado (extensão .pdf é adicionada automaticamente)
+    // await resultado.salvar!(nome: 'nota_fiscal');
+
+    // Opção 3: Com nome e extensão completa
+    // await resultado.salvar!(nome: 'minha_nota.pdf');
+    print('');
   } on ExcecaoSenhaInvalida catch (e) {
     print('❌ Senha inválida: $e');
   } on ExcecaoDocumentoNaoEncontrado catch (e) {
@@ -68,7 +70,7 @@ void main() async {
 /// Exemplo avançado: múltiplos downloads reutilizando conexões
 void exemploAvancado() async {
   const baixador = BaixadorNfeCidades(
-    chaveApiAntiCaptcha: 'SUA_CHAVE_API',
+    chaveApiAntiCaptcha: chaveApiAntiCaptcha,
   );
 
   // Para múltiplos downloads, use criarExecutor()
@@ -78,7 +80,7 @@ void exemploAvancado() async {
   try {
     print('📥 Baixando múltiplas NFes...\n');
 
-    final senhas = ['ABC123', 'DEF456', 'GHI789'];
+    final senhas = [senhaNfe, senhaNfe, senhaNfe];
     final resultados = <Map<String, dynamic>>[];
 
     for (final senha in senhas) {
@@ -92,8 +94,10 @@ void exemploAvancado() async {
 
     print('\n💾 Salvando ${resultados.length} PDFs...');
     for (var i = 0; i < resultados.length; i++) {
-      await resultados[i]['salvar']!('nota_$i.pdf');
-      print('   ✅ Salvo: nota_$i.pdf');
+      // Salva com ID do documento como nome padrão
+      await resultados[i]['salvar']!();
+      final id = resultados[i]['idDocumento'];
+      print('   ✅ Salvo: $id.pdf');
     }
 
     print('\n✅ Todos os downloads concluídos!');
@@ -107,11 +111,11 @@ void exemploAvancado() async {
 /// Exemplo: apenas obter URL sem baixar bytes
 void exemploApenasUrl() async {
   const baixador = BaixadorNfeCidades(
-    chaveApiAntiCaptcha: 'SUA_CHAVE_API',
+    chaveApiAntiCaptcha: chaveApiAntiCaptcha,
   );
 
   final resultado = await baixador(
-    senha: 'ABCD1234567890',
+    senha: senhaNfe,
     baixarBytes: false, // Não baixa os bytes - apenas URL
   );
 
@@ -130,12 +134,12 @@ void exemploApenasUrl() async {
 /// Exemplo: timeout customizado
 void exemploTimeout() async {
   const baixador = BaixadorNfeCidades(
-    chaveApiAntiCaptcha: 'SUA_CHAVE_API',
+    chaveApiAntiCaptcha: chaveApiAntiCaptcha,
   );
 
   try {
     final resultado = await baixador(
-      senha: 'ABCD1234567890',
+      senha: senhaNfe,
       baixarBytes: true,
       tempoLimite: const Duration(minutes: 5), // Padrão é 3 minutos
     );
@@ -144,4 +148,67 @@ void exemploTimeout() async {
   } on ExcecaoTempoEsgotado catch (e) {
     print('Operação expirou após 5 minutos: $e');
   }
+}
+
+/// Exemplo: Sistema de cache
+void exemploCache() async {
+  const baixador = BaixadorNfeCidades(
+    chaveApiAntiCaptcha: chaveApiAntiCaptcha,
+  );
+
+  print('⚡ Demonstração do Sistema de Cache\n');
+
+  // Cache está ativado por padrão
+  print('📌 Cache Status: ${BaixadorNfeCidades.usarCache ? "Ativado" : "Desativado"}\n');
+
+  print('🔄 Primeira chamada (busca da fonte + salva no cache)...');
+  final inicio1 = DateTime.now();
+  final resultado1 = await baixador(senha: senhaNfe, baixarBytes: true);
+  final duracao1 = DateTime.now().difference(inicio1);
+  print('✅ Concluído em ${duracao1.inSeconds}s');
+  print('   ID: ${resultado1.idDocumento}\n');
+
+  print('⚡ Segunda chamada (retorna do cache)...');
+  final inicio2 = DateTime.now();
+  final resultado2 = await baixador(senha: senhaNfe, baixarBytes: true);
+  final duracao2 = DateTime.now().difference(inicio2);
+  print('✅ Concluído em ${duracao2.inMilliseconds}ms (CACHE HIT!)');
+  print('   ID: ${resultado2.idDocumento}\n');
+
+  print('📊 Comparação:');
+  print('   Sem cache: ${duracao1.inSeconds}s');
+  print('   Com cache: ${duracao2.inMilliseconds}ms');
+  print('   Ganho: ${(duracao1.inMilliseconds / duracao2.inMilliseconds).toStringAsFixed(1)}x mais rápido!\n');
+
+  // Desabilitar cache
+  print('❌ Desabilitando cache...');
+  BaixadorNfeCidades.usarCache = false;
+  print('   Cache Status: ${BaixadorNfeCidades.usarCache ? "Ativado" : "Desativado"}\n');
+
+  print('🔄 Terceira chamada (cache desabilitado, busca da fonte)...');
+  final inicio3 = DateTime.now();
+  final resultado3 = await baixador(senha: senhaNfe, baixarBytes: true);
+  final duracao3 = DateTime.now().difference(inicio3);
+  print('✅ Concluído em ${duracao3.inSeconds}s');
+  print('   ID: ${resultado3.idDocumento}\n');
+
+  // Reabilitar cache
+  BaixadorNfeCidades.usarCache = true;
+
+  // Limpar cache de senha específica
+  print('🧹 Limpando cache da senha específica...');
+  await BaixadorNfeCidades.limparCachePorSenha(senhaNfe);
+  print('✅ Cache da senha removido!\n');
+
+  print('🔄 Quarta chamada (cache foi limpo, busca da fonte novamente)...');
+  final inicio4 = DateTime.now();
+  final resultado4 = await baixador(senha: senhaNfe, baixarBytes: true);
+  final duracao4 = DateTime.now().difference(inicio4);
+  print('✅ Concluído em ${duracao4.inSeconds}s');
+  print('   ID: ${resultado4.idDocumento}\n');
+
+  // Limpar todo o cache
+  print('🧹 Limpando todo o cache...');
+  await BaixadorNfeCidades.limparCache();
+  print('✅ Cache limpo com sucesso!\n');
 }

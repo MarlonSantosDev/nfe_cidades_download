@@ -65,3 +65,4 @@ export 'src/nfe_result_extension.dart';
 export 'src/nfe_file_saver.dart';
 export 'src/platform_detector.dart';
 export 'src/exceptions/nfe_exceptions.dart';
+export 'src/cache/nfe_cache_config.dart';

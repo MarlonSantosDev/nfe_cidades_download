@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:convert';
 import 'package:dio/dio.dart';
@@ -6,6 +7,8 @@ import 'nfe_api_client.dart';
 import 'nfe_file_saver.dart';
 import 'constants.dart';
 import 'exceptions/nfe_exceptions.dart';
+import 'cache/nfe_cache_config.dart';
+import 'cache/nfe_cache_manager.dart';
 
 /// Interface para executor reutilizável de downloads NFe
 abstract class NfeExecutor {
@@ -68,6 +71,53 @@ class BaixadorNfeCidades {
   /// [chaveApiAntiCaptcha] é obrigatório - obtenha em https://anti-captcha.com
   const BaixadorNfeCidades({required this.chaveApiAntiCaptcha});
 
+  /// Habilita ou desabilita o cache globalmente
+  ///
+  /// - `true` (padrão): Cache ativado - NFes são armazenadas e retornadas do cache
+  /// - `false`: Cache desativado - sempre busca da fonte (Anti-Captcha + API)
+  ///
+  /// Exemplo:
+  /// ```dart
+  /// // Desabilitar cache
+  /// BaixadorNfeCidades.usarCache = false;
+  ///
+  /// // Habilitar cache (padrão)
+  /// BaixadorNfeCidades.usarCache = true;
+  /// ```
+  static bool get usarCache => NfeCacheConfig.usarCache;
+  static set usarCache(bool valor) => NfeCacheConfig.usarCache = valor;
+
+  /// Limpa todo o cache armazenado
+  ///
+  /// Remove todas as entradas de NFes cacheadas do shared_preferences.
+  /// Útil para forçar re-download de todos os documentos ou liberar espaço.
+  ///
+  /// Exemplo:
+  /// ```dart
+  /// await BaixadorNfeCidades.limparCache();
+  /// print('Cache limpo com sucesso!');
+  /// ```
+  static Future<void> limparCache() => NfeCacheConfig.limparCache();
+
+  /// Limpa o cache de uma senha específica
+  ///
+  /// Remove apenas a entrada de cache da senha fornecida, mantendo
+  /// todas as outras entradas intactas.
+  ///
+  /// [senha] é a senha da NFe cujo cache deve ser removido
+  ///
+  /// Exemplo:
+  /// ```dart
+  /// // Remover cache de uma senha específica
+  /// await BaixadorNfeCidades.limparCachePorSenha('17PI.QZNQ.HYQU.CYMM');
+  /// print('Cache da senha removido!');
+  ///
+  /// // Próxima chamada com essa senha buscará da fonte
+  /// final resultado = await baixador(senha: '17PI.QZNQ.HYQU.CYMM');
+  /// ```
+  static Future<void> limparCachePorSenha(String senha) =>
+      NfeCacheConfig.limparCachePorSenha(senha);
+
   /// Executa download com auto-dispose (callable)
   ///
   /// Esta é a forma recomendada de usar o baixador. Os recursos são
@@ -84,6 +134,8 @@ class BaixadorNfeCidades {
   /// - `bytes`: Bytes do PDF (Uint8List) - null se baixarBytes=false
   /// - `bytesBase64`: Bytes em base64 - null se baixarBytes=false
   /// - `salvar`: Função para salvar o PDF - null se baixarBytes=false
+  ///   - Sem parâmetro: salva como "{idDocumento}.pdf"
+  ///   - Com nome: salva com nome customizado (adiciona .pdf se necessário)
   ///
   /// Use a extension [NfeResultExtension] para acesso type-safe aos campos.
   ///
@@ -143,13 +195,16 @@ class _BaixadorNfeExecutor implements NfeExecutor {
   final String chaveApiAntiCaptcha;
   final ClienteAntiCaptcha _clienteCaptcha;
   final ClienteApiNfe _clienteNfe;
+  late final NfeCacheManager _cacheManager;
 
   /// Cria uma nova instância do executor
   ///
   /// [dio] é opcional - forneça uma instância Dio personalizada se necessário
   _BaixadorNfeExecutor({required this.chaveApiAntiCaptcha, Dio? dio})
       : _clienteCaptcha = ClienteAntiCaptcha(chaveApi: chaveApiAntiCaptcha, dio: dio),
-        _clienteNfe = ClienteApiNfe(dio: dio);
+        _clienteNfe = ClienteApiNfe(dio: dio) {
+    _cacheManager = NfeCacheManager();
+  }
 
   /// Baixa um documento NFe usando a senha fornecida
   ///
@@ -165,7 +220,7 @@ class _BaixadorNfeExecutor implements NfeExecutor {
 
     try {
       return await Future.any([
-        _baixarNfeInterno(senha: senha, baixarBytes: baixarBytes),
+        _baixarNfeComCache(senha: senha, baixarBytes: baixarBytes),
         Future.delayed(tempoLimiteEfetivo).then((_) {
           throw ExcecaoTempoEsgotado(
             'Operação expirou após ${tempoLimiteEfetivo.inSeconds} segundos',
@@ -181,6 +236,59 @@ class _BaixadorNfeExecutor implements NfeExecutor {
         erroOriginal: e,
       );
     }
+  }
+
+  /// Baixa NFe com suporte a cache
+  ///
+  /// Verifica se cache está habilitado e se existe entrada cacheada.
+  /// Se sim, retorna do cache. Caso contrário, busca da fonte e cacheia.
+  Future<Map<String, dynamic>> _baixarNfeComCache({
+    required String senha,
+    required bool baixarBytes,
+  }) async {
+    // 1. Verificar se cache está habilitado
+    if (!NfeCacheConfig.usarCache) {
+      return await _baixarNfeInterno(senha: senha, baixarBytes: baixarBytes);
+    }
+
+    // 2. Tentar obter do cache
+    final entryCache = await _cacheManager.obter(senha);
+
+    if (entryCache != null) {
+      // Verificar se cache atende aos requisitos
+      // Se baixarBytes=true mas cache não tem bytes, buscar da fonte
+      if (baixarBytes && entryCache.bytesBase64 == null) {
+        // Cache existe mas sem bytes - buscar da fonte
+        final resultado = await _baixarNfeInterno(senha: senha, baixarBytes: baixarBytes);
+
+        // Atualizar cache com bytes
+        unawaited(_cacheManager.salvar(senha, resultado).catchError((erro) {
+          assert(() {
+            print('[BaixadorNfe] Erro ao atualizar cache: $erro');
+            return true;
+          }());
+        }));
+
+        return resultado;
+      }
+
+      // Cache HIT - retornar do cache
+      return entryCache.paraResultado(baixarBytes: baixarBytes);
+    }
+
+    // 3. Cache MISS - buscar da fonte
+    final resultado = await _baixarNfeInterno(senha: senha, baixarBytes: baixarBytes);
+
+    // 4. Salvar no cache (fire-and-forget, não bloqueia retorno)
+    unawaited(_cacheManager.salvar(senha, resultado).catchError((erro) {
+      // Log apenas - falha no cache é transparente
+      assert(() {
+        print('[BaixadorNfe] Erro ao salvar cache: $erro');
+        return true;
+      }());
+    }));
+
+    return resultado;
   }
 
   /// Implementação interna do processo de download
@@ -218,6 +326,28 @@ class _BaixadorNfeExecutor implements NfeExecutor {
       bytesBase64 = base64Encode(bytesPdf);
     }
 
+    // Criar função de salvar com parâmetro opcional nomeado
+    Future<void> Function({String? nome})? funcaoSalvar;
+    if (bytesPdf != null) {
+      // Capturar valor não-nulo para uso na closure
+      final bytesNaoNulos = bytesPdf;
+      funcaoSalvar = ({String? nome}) async {
+        // Se não fornecido, usa o ID do documento
+        // Se fornecido sem extensão .pdf, adiciona automaticamente
+        final nomeArquivo = (nome == null || nome.isEmpty)
+            ? '$idDocumento.pdf'
+            : (!nome.toLowerCase().endsWith('.pdf'))
+                ? '$nome.pdf'
+                : nome;
+
+        await NfeFileSaver.salvar(
+          bytes: bytesNaoNulos,
+          nomeArquivo: nomeArquivo,
+          caminho: null,
+        );
+      };
+    }
+
     // Retornar Map com todos os dados
     return {
       'urlDownload': urlDownload,
@@ -225,15 +355,7 @@ class _BaixadorNfeExecutor implements NfeExecutor {
       'tamanho': bytesPdf?.length ?? 0,
       'bytes': bytesPdf,
       'bytesBase64': bytesBase64,
-      'salvar': bytesPdf != null
-          ? (String? caminho) async {
-              await NfeFileSaver.salvar(
-                bytes: bytesPdf!, // Non-null assertion segura aqui
-                nomeArquivo: '$idDocumento.pdf',
-                caminho: caminho,
-              );
-            }
-          : null,
+      'salvar': funcaoSalvar,
     };
   }
 

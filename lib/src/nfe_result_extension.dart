@@ -16,8 +16,11 @@ import 'dart:typed_data';
 /// print(resultado.bytes);         // Uint8List?
 /// print(resultado.bytesBase64);   // String?
 ///
-/// // Salvar arquivo
-/// await resultado.salvar!('nota.pdf');
+/// // Salvar arquivo (nome padrão: ID do documento)
+/// await resultado.salvar!();
+///
+/// // Ou com nome customizado
+/// await resultado.salvar!(nome: 'nota_fiscal');
 ///
 /// // Ainda pode acessar como Map se necessário
 /// print(resultado['urlDownload']);
@@ -56,19 +59,25 @@ extension NfeResultExtension on Map<String, dynamic> {
   ///
   /// Será `null` se `baixarBytes` foi definido como `false`.
   ///
+  /// **Comportamento:**
+  /// - Sem parâmetro: salva como `{idDocumento}.pdf` no diretório atual
+  /// - Com `nome`: salva com nome customizado (adiciona `.pdf` automaticamente se necessário)
+  ///
   /// **Comportamento por plataforma:**
-  /// - **Web**: Dispara download do browser. O parâmetro `caminho` é ignorado.
-  /// - **Nativo**: Salva em `caminho` se fornecido, ou no diretório atual
-  ///   com o nome `{idDocumento}.pdf`.
+  /// - **Web**: Dispara download do browser
+  /// - **Nativo (Mobile/Desktop)**: Salva no diretório atual
   ///
   /// Exemplo:
   /// ```dart
-  /// // Caminho padrão
-  /// await resultado.salvar!(null);
+  /// // Nome padrão (ID do documento)
+  /// await resultado.salvar!();
   ///
-  /// // Caminho customizado (apenas nativo)
-  /// await resultado.salvar!('/Downloads/minha_nota.pdf');
+  /// // Nome customizado
+  /// await resultado.salvar!(nome: 'nota_fiscal');
+  ///
+  /// // Nome com extensão
+  /// await resultado.salvar!(nome: 'minha_nota.pdf');
   /// ```
-  Future<void> Function(String? caminho)? get salvar =>
-      this['salvar'] as Future<void> Function(String?)?;
+  Future<void> Function({String? nome})? get salvar =>
+      this['salvar'] as Future<void> Function({String? nome})?;
 }

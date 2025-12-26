@@ -307,6 +307,6 @@ class ClienteApiNfe {
   /// Fecha a instância Dio subjacente e libera todos os recursos.
   /// Sempre chame este método quando terminar de usar o cliente.
   void liberar() {
-    _dio.close();
+    _dio.close(force: true);
   }
 }
