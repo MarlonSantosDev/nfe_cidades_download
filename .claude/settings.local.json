@@ -17,7 +17,8 @@
       "Bash(dart compile:*)",
       "Bash(dart test_validacao_completa.dart:*)",
       "Bash(find:*)",
-      "Bash(dart pub deps:*)"
+      "Bash(dart pub deps:*)",
+      "Bash(flutter build:*)"
     ]
   }
 }

@@ -1,4 +1,7 @@
-import 'package:shared_preferences/shared_preferences.dart';
+// Conditional import: usa shared_preferences do pub.dev quando disponível (Flutter),
+// senão usa stub em memória (Dart puro/web sem Flutter)
+import 'package:shared_preferences/shared_preferences.dart'
+    if (dart.library.html) 'shared_preferences_stub.dart';
 
 /// Abstração sobre shared_preferences para armazenamento de cache
 ///
